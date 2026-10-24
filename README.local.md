@@ -2,6 +2,8 @@
 
 ## TabによるMarkdown階層編集
 
+構造の判定にはLezerの構文木を使います。コード内や段落の続きにあるlist風の文字列を子listと誤認して空行を入れず、コード本文を保持します。
+
 通常段落でTabを押すと、内容を標準Markdownのlist itemに変換します。直前が通常段落なら親itemへ変換し、現在段落をその子itemにします。直前に親候補がない場合はroot list itemを作ります。親がlist itemなら、そのmarkerの幅に合わせて子itemを作ります。複数行の段落は1 itemとして保ち、選択した連続list itemは同じ深さへ移動します。
 
 複数cursorでは同じ通常段落への重複変換を一度にまとめ、選択したlist itemはまとめて階層変更します。別々の通常段落を含む一括選択は階層変換せず、従来のTab挿入処理を使います。
@@ -38,6 +40,8 @@ CodeMirrorの公式説明では、`visibleRanges`による描画範囲の絞り�
 jsdomのEditorView更新処理の単回比較です。画面描画完了までの入力遅延、ファイル読込、アプリ起動、サクラとの実機比較ではありません。計測JSONはOS一時領域の `markra-callout-benchmark-1792817669926.json`（変更前）、`markra-callout-benchmark-1792817692932.json`（変更後）です。
 
 ## Calloutの通常本文入力
+
+既存アプリは1,000,000 bytes以上などの大文書をソース表示へ切り替えます。以下の1 MiB測定はこの制限を変更せず、エディタ単体へ負荷をかけた結果です。
 
 編集前後のchanged lineがどちらもblockquoteではなく、変更内容に改行がない場合だけ、解析済みCallout位置とspacing Decorationをtransaction changesでmapします。通常本文の入力・削除では全文の行走査を行いません。quote内の編集、blockquoteの生成・削除、改行は従来どおり全文を解析します。安全条件を狭く保ち、Callout markerやquote continuationの検査を局所mapの対象外にしています。
 

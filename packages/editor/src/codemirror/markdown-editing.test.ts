@@ -640,12 +640,21 @@ describe("markdownEditingPlugin", () => {
   });
 
   it("separates a promoted ordered child list from its plain parent paragraph", () => {
-    const doc = "- Parent\n  2. Child";
+    const doc = "- Parent\n\n  2. Child";
     const view = createView(doc, doc.indexOf("Parent"));
 
     expect(press(view, "Tab", { shiftKey: true })).toBe(true);
     expect(view.state.doc.toString()).toBe("Parent\n\n2. Child");
     expect(topLevelNodeNames(view)).toEqual(["Paragraph", "OrderedList"]);
+  });
+
+  it("keeps list-looking lazy continuation text as part of its paragraph", () => {
+    const doc = "- Parent\n  2. continuation";
+    const view = createView(doc, doc.indexOf("Parent"));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("Parent\n2. continuation");
+    expect(topLevelNodeNames(view)).toEqual(["Paragraph"]);
   });
 
   it("keeps selected root items as separate Markdown paragraphs", () => {
@@ -657,6 +666,33 @@ describe("markdownEditingPlugin", () => {
     expect(press(view, "Tab", { shiftKey: true })).toBe(true);
     expect(view.state.doc.toString()).toBe("First\n\nSecond\n- Third");
     expect(topLevelNodeNames(view)).toEqual(["Paragraph", "Paragraph", "BulletList"]);
+  });
+
+  it.each(["- literal", "2. literal"])(
+    "preserves list-looking code content %s when unlisting its parent",
+    (literal) => {
+      const doc = ["- Parent", "  ```text", `  ${literal}`, "  ```"].join("\n");
+      const view = createView(doc, doc.indexOf("Parent"));
+
+      expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+      expect(view.state.doc.toString()).toBe(
+        ["Parent", "```text", literal, "```"].join("\n"),
+      );
+      expect(topLevelNodeNames(view)).toEqual(["Paragraph", "FencedCode"]);
+    },
+  );
+
+  it("separates a real child list after a fenced block without changing code", () => {
+    const doc = [
+      "- Parent", "  ```text", "  - literal", "  ```", "  2. Child",
+    ].join("\n");
+    const view = createView(doc, doc.indexOf("Parent"));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe([
+      "Parent", "```text", "- literal", "```", "", "2. Child",
+    ].join("\n"));
+    expect(topLevelNodeNames(view)).toEqual(["Paragraph", "FencedCode", "OrderedList"]);
   });
 
   it("keeps Tab inside fenced code as plain indentation", () => {

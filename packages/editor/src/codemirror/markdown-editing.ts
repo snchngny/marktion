@@ -171,10 +171,14 @@ function rootOutdentChanges(view: EditorView, item: MarkdownBlockNode) {
     changes.push({ from: line.from, insert: "\n" });
   }
   const lines = nodeLines(view, item);
-  const childListStart = lines.slice(1).find((childLine) => {
-    const nestedMarker = /^([\t ]*)(?:[-+*]|\d+[.)])[\t ]+/u.exec(childLine.text);
-    return nestedMarker && markdownColumnWidth(nestedMarker[1]) >= delta;
-  })?.from ?? null;
+  // A list-looking line inside code or a lazy paragraph is content, not a
+  // child list. Only real list nodes need a new paragraph boundary here.
+  const childListStarts = new Set<number>();
+  for (let child = item.firstChild; child; child = child.nextSibling) {
+    if (child.name === "BulletList" || child.name === "OrderedList") {
+      childListStarts.add(view.state.doc.lineAt(child.from).from);
+    }
+  }
   for (const childLine of lines) {
     if (childLine.from === line.from) continue;
     const leading = /^[\t ]*/u.exec(childLine.text)?.[0] ?? "";
@@ -186,7 +190,10 @@ function rootOutdentChanges(view: EditorView, item: MarkdownBlockNode) {
       columns += width;
       remove += 1;
     }
-    if (childLine.from === childListStart) {
+    if (
+      childListStarts.has(childLine.from) &&
+      view.state.doc.line(childLine.number - 1).text.trim().length > 0
+    ) {
       changes.push({
         from: childLine.from,
         to: childLine.from + remove,
