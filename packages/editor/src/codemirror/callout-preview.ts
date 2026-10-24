@@ -2,6 +2,7 @@ import {
   StateField,
   type EditorState as CodeMirrorState,
   type Range,
+  type Text,
 } from "@codemirror/state";
 import {
   Decoration,
@@ -43,6 +44,8 @@ const calloutTypeOrder: readonly MarkdownCalloutType[] = [
   "caution",
 ];
 
+const calloutsByDocument = new WeakMap<Text, readonly CodeMirrorCallout[]>();
+
 function blockquoteContent(line: string) {
   const match = /^[ \t]{0,3}((?:>[ \t]*)+)(.*)$/u.exec(line);
   return match
@@ -54,6 +57,9 @@ function blockquoteContent(line: string) {
 }
 
 function readCodeMirrorCallouts(state: CodeMirrorState) {
+  const cached = calloutsByDocument.get(state.doc);
+  if (cached) return cached;
+
   const callouts: CodeMirrorCallout[] = [];
 
   for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
@@ -86,6 +92,7 @@ function readCodeMirrorCallouts(state: CodeMirrorState) {
     lineNumber = continuationLine - 1;
   }
 
+  calloutsByDocument.set(state.doc, callouts);
   return callouts;
 }
 

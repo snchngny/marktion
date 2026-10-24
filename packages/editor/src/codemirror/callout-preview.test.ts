@@ -1,6 +1,7 @@
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { afterEach, describe, expect, it } from "vitest";
+import * as shared from "@markra/shared";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { calloutPreviewPlugin, liveMarkdown } from "./index.ts";
 import "./dom.test-support.ts";
 
@@ -24,11 +25,48 @@ function createView(doc: string, enabled = true) {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const view of views.splice(0)) view.destroy();
   document.body.replaceChildren();
 });
 
 describe("calloutPreviewPlugin", () => {
+  it("parses callouts once per document and reuses them for selection updates", () => {
+    const parseMarker = vi.spyOn(shared, "parseMarkdownCalloutMarker");
+    const doc = "> [!NOTE]\n> Detail\n\nEdit";
+    const view = createView(doc);
+
+    // The view decorations and spacing field share the marker parse for the
+    // same Text doc.
+    expect(parseMarker).toHaveBeenCalledTimes(1);
+
+    view.dispatch({
+      selection: EditorSelection.cursor(doc.indexOf("Detail") + 2),
+    });
+    view.dispatch({ effects: EditorView.scrollIntoView(doc.length) });
+    view.contentDOM.dispatchEvent(new FocusEvent("blur"));
+    view.focus();
+    expect(parseMarker).toHaveBeenCalledTimes(1);
+
+    view.dispatch({
+      changes: { from: view.state.doc.length, insert: "!" },
+      selection: { anchor: view.state.doc.length + 1 },
+      userEvent: "input",
+    });
+    expect(parseMarker).toHaveBeenCalledTimes(2);
+    parseMarker.mockRestore();
+  });
+
+  it("caches documents with no callouts", () => {
+    const parseMarker = vi.spyOn(shared, "parseMarkdownCalloutMarker");
+    const doc = "> ordinary quote\n\nEdit";
+    const view = createView(doc);
+
+    expect(parseMarker).toHaveBeenCalledTimes(1);
+    view.dispatch({ selection: EditorSelection.cursor(doc.indexOf("Edit")) });
+    expect(parseMarker).toHaveBeenCalledTimes(1);
+  });
+
   it("renders a GitHub alert as a callout without changing Markdown", () => {
     const doc = "> [!WARNING]\n>\n> Synthetic detail\n\nEdit";
     const view = createView(doc);
@@ -149,6 +187,22 @@ describe("calloutPreviewPlugin", () => {
 
     expect(view.state.doc.toString()).toBe("> [!CAUTION]\n> Synthetic detail\n\nEdit");
     expect(view.dom.querySelector(".markra-callout-header")?.textContent).toContain("Caution");
+  });
+
+  it("reparses changed and deleted callouts for the new document", () => {
+    const doc = "> [!NOTE]\n> Synthetic detail\n\nEdit";
+    const view = createView(doc);
+
+    view.dispatch({
+      changes: { from: 2, to: 9, insert: "[!TIP]" },
+    });
+    expect(view.dom.querySelector(".cm-markra-callout")?.getAttribute("data-callout-type"))
+      .toBe("tip");
+
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.line(2).to + 1, insert: "" },
+    });
+    expect(view.dom.querySelector(".cm-markra-callout")).toBeNull();
   });
 
   it("respects the GitHub alert preference gate", () => {
