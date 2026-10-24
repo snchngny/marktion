@@ -107,7 +107,7 @@ const fixedKeyboardShortcuts: Array<{
   { labelKey: "app.openFolderDialog", shortcut: "Mod+Shift+O" },
   { labelKey: "settings.editor.shortcutCloseDocument", shortcut: "Mod+W" },
   { labelKey: "menu.saveDocument", shortcut: "Mod+S" },
-  { labelKey: "menu.saveDocumentAs", shortcut: "Mod+Shift+S" },
+  { labelKey: "menu.saveDocumentAs", shortcut: "Mod+Shift+Alt+S" },
   { labelKey: "settings.editor.shortcutDocumentSearch", shortcut: "Mod+F" },
   {
     labelKey: "settings.editor.shortcutDocumentReplace",

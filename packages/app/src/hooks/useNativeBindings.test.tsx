@@ -223,9 +223,9 @@ describe("useNativeMenuHandlers", () => {
 
     result.current.formatBulletList?.();
 
-    expect(runEditorShortcut).toHaveBeenCalledWith("*", {
+    expect(runEditorShortcut).toHaveBeenCalledWith("%", {
       altKey: false,
-      code: "Digit8",
+      code: "Digit5",
       modKey: true,
       shiftKey: true
     });
@@ -376,6 +376,67 @@ describe("useApplicationShortcuts", () => {
     saveDocument: vi.fn(),
     saveDocumentAs: vi.fn()
   };
+
+  it("routes Mod+Shift+Alt+S to Save As, including repeated keydown suppression", () => {
+    const saveDocumentAs = vi.fn();
+    renderHook(() =>
+      useApplicationShortcuts({
+        ...baseOptions,
+        saveDocumentAs
+      })
+    );
+
+    const handled = fireEvent.keyDown(window, {
+      altKey: true,
+      code: "KeyS",
+      key: "s",
+      metaKey: true,
+      shiftKey: true
+    });
+    fireEvent.keyDown(window, {
+      altKey: true,
+      code: "KeyS",
+      key: "s",
+      metaKey: true,
+      repeat: true,
+      shiftKey: true
+    });
+    const composingHandled = fireEvent.keyDown(window, {
+      altKey: true,
+      code: "KeyS",
+      isComposing: true,
+      key: "s",
+      metaKey: true,
+      shiftKey: true
+    });
+
+    expect(handled).toBe(false);
+    expect(composingHandled).toBe(true);
+    expect(saveDocumentAs).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets the former Mod+Shift+S Save As shortcut reach the editor", () => {
+    const saveDocument = vi.fn();
+    const saveDocumentAs = vi.fn();
+    renderHook(() =>
+      useApplicationShortcuts({
+        ...baseOptions,
+        saveDocument,
+        saveDocumentAs
+      })
+    );
+
+    const handled = fireEvent.keyDown(window, {
+      code: "KeyS",
+      key: "s",
+      metaKey: true,
+      shiftKey: true
+    });
+
+    expect(handled).toBe(true);
+    expect(saveDocument).not.toHaveBeenCalled();
+    expect(saveDocumentAs).not.toHaveBeenCalled();
+  });
 
   it("opens settings from the default settings shortcut", () => {
     const openSettings = vi.fn();

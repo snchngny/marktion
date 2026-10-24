@@ -671,7 +671,7 @@ describe("NativeTitleBar", () => {
     expect(saveMarkdown).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("menuitem", { name: "File" }));
-    const saveAsItem = screen.getByRole("menuitem", { name: "Save As... Ctrl+Shift+S" });
+    const saveAsItem = screen.getByRole("menuitem", { name: "Save As... Ctrl+Shift+Alt+S" });
     expect(saveAsItem).not.toBeDisabled();
     fireEvent.click(saveAsItem);
     expect(saveMarkdownAs).toHaveBeenCalledTimes(1);
@@ -714,7 +714,7 @@ describe("NativeTitleBar", () => {
     expect(formatBold).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("menuitem", { name: "Format" }));
-    expect(screen.getByRole("menuitem", { name: "Heading 1 Ctrl+Alt+1" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Heading 1 Ctrl+Shift+1" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("menuitem", { name: "View" }));
 

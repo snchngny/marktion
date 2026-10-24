@@ -294,8 +294,8 @@ describe("KeyboardShortcutsSettings", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Bullet List shortcut" }));
     fireEvent.keyDown(window, {
-      code: "Digit8",
-      key: "*",
+      code: "Digit7",
+      key: "&",
       metaKey: true,
       shiftKey: true
     });
@@ -304,7 +304,7 @@ describe("KeyboardShortcutsSettings", () => {
       ...preferences,
       markdownShortcuts: {
         ...defaultMarkdownShortcuts,
-        bulletList: "Mod+Shift+8"
+        bulletList: "Mod+Shift+7"
       }
     });
 
@@ -352,7 +352,7 @@ describe("KeyboardShortcutsSettings", () => {
       ...preferences,
       markdownShortcuts: {
         ...defaultMarkdownShortcuts,
-        bulletList: "Mod+K",
+        codeBlock: "Mod+K",
         link: "Mod+Shift+8"
       }
     });
@@ -409,7 +409,7 @@ describe("KeyboardShortcutsSettings", () => {
     expect(screen.getByRole("button", { name: "Typewriter mode shortcut" })).toHaveTextContent("Ctrl+Shift+Y");
     expect(screen.getByRole("button", { name: "Spelling suggestions shortcut" })).toHaveTextContent("Ctrl+.");
     expect(screen.getByRole("button", { name: "Link shortcut" })).toHaveTextContent("Ctrl+K");
-    expect(screen.getByRole("button", { name: "Strikethrough shortcut" })).toHaveTextContent("Ctrl+Shift+X");
+    expect(screen.getByRole("button", { name: "Strikethrough shortcut" })).toHaveTextContent("Ctrl+Shift+S");
   });
 
   it("lists fixed application shortcuts as read-only keycaps", () => {
@@ -432,6 +432,8 @@ describe("KeyboardShortcutsSettings", () => {
     expect(within(fixedShortcuts).getByText("Ctrl+O")).toBeInTheDocument();
     expect(within(fixedShortcuts).getByText("Save")).toBeInTheDocument();
     expect(within(fixedShortcuts).getByText("Ctrl+S")).toBeInTheDocument();
+    expect(within(fixedShortcuts).getByText("Save As...")).toBeInTheDocument();
+    expect(within(fixedShortcuts).getByText("Ctrl+Shift+Alt+S")).toBeInTheDocument();
     expect(within(fixedShortcuts).getByText("Search document")).toBeInTheDocument();
     expect(within(fixedShortcuts).getByText("Ctrl+F")).toBeInTheDocument();
     expect(within(fixedShortcuts).getByText("Replace in document")).toBeInTheDocument();

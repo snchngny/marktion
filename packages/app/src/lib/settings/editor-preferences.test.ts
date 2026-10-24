@@ -545,13 +545,13 @@ describe("editor preferences", () => {
         inlineCode: "Mod+Shift+E",
         italic: "Mod+S",
         quote: "Alt+Q",
-        strikethrough: "Mod+Shift+X"
+        strikethrough: "Mod+Alt+X"
       }
     }).markdownShortcuts).toEqual({
       ...defaultMarkdownShortcuts,
       bold: "Mod+Alt+B",
       quote: "Alt+Q",
-      strikethrough: "Mod+Shift+X"
+      strikethrough: "Mod+Alt+X"
     });
   });
 

@@ -1,5 +1,9 @@
 # ローカル変更メモ
 
+## Markdown書式ショートカット
+
+Windows/Linuxの初期設定では、Ctrl+Shift+0〜3で段落・見出し1〜3、Ctrl+Shift+5で箇条書き、Ctrl+Shift+6で番号付きリスト、Ctrl+Shift+8でコードブロック、Ctrl+Shift+9で引用、Ctrl+Shift+Sで取消線を設定します。MacではCtrlをCommandに置き換えます。保存はCtrl+S、別名保存はCtrl+Shift+Alt+Sです。
+
 ## 視覚編集のEnterとタスクリスト
 
 視覚編集の通常段落内でEnterを押すと、Markdownの空行を挟んで段落を分割します。カーソルが段落の先頭や空行にある場合、リスト、引用、コード、frontmatter、HTML、表、数式などの構造はCodeMirror/Markdownの標準動作へ委譲します。ATX見出しの末尾からEnterで次の通常段落へ移れます。

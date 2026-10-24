@@ -5522,7 +5522,7 @@ describe("Markra workspace", () => {
 
     fireEvent.focus(sideSource);
     replaceMarkdownSource(sideSource, "# Second\n\nFocused side save as");
-    fireEvent.keyDown(window, { key: "s", metaKey: true, shiftKey: true });
+    fireEvent.keyDown(window, { key: "s", metaKey: true, shiftKey: true, altKey: true });
 
     await waitFor(() =>
       expect(mockedSaveNativeMarkdownFile).toHaveBeenLastCalledWith(
@@ -5549,7 +5549,7 @@ describe("Markra workspace", () => {
     expect(sidePaneTab).not.toHaveAttribute("data-document-tab-pane-focus");
     await waitFor(() => expect(document.activeElement).toBe(mainSource));
     replaceMarkdownSource(mainSource, "# First\n\nFocused main edit");
-    fireEvent.keyDown(window, { key: "s", metaKey: true, shiftKey: true });
+    fireEvent.keyDown(window, { key: "s", metaKey: true, shiftKey: true, altKey: true });
 
     await waitFor(() =>
       expect(mockedSaveNativeMarkdownFile).toHaveBeenLastCalledWith(

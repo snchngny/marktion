@@ -520,6 +520,13 @@ export function useApplicationShortcuts({
       }
 
       if (!isModKey) return;
+      if (matchesKeyboardShortcutEvent(event, "Mod+Shift+Alt+S")) {
+        if (event.isComposing) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (!event.repeat) saveDocumentAs();
+        return;
+      }
       if (handleSettingsWindowShortcut(event, openSettings)) return;
 
       const key = event.key.toLowerCase();
@@ -560,13 +567,10 @@ export function useApplicationShortcuts({
         event.preventDefault();
         event.stopPropagation();
         if (!event.repeat) openBlankEditorWindow();
-      } else if (key === "s" && event.shiftKey) {
-        event.preventDefault();
-        saveDocumentAs();
       } else if (key === "w" && !event.shiftKey && closeDocument) {
         event.preventDefault();
         closeDocument();
-      } else if (key === "s") {
+      } else if (key === "s" && !event.shiftKey) {
         event.preventDefault();
         saveDocument();
       } else if (key === "o" && event.shiftKey) {

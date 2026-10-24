@@ -26,6 +26,72 @@ describe("keyboard shortcuts", () => {
     expect(new Set(shortcuts).size).toBe(shortcuts.length);
   });
 
+  it("uses the Notion-style Markdown formatting defaults and migrates prior defaults", () => {
+    expect({
+      paragraph: defaultKeyboardShortcuts.paragraph,
+      heading1: defaultKeyboardShortcuts.heading1,
+      heading2: defaultKeyboardShortcuts.heading2,
+      heading3: defaultKeyboardShortcuts.heading3,
+      bulletList: defaultKeyboardShortcuts.bulletList,
+      orderedList: defaultKeyboardShortcuts.orderedList,
+      codeBlock: defaultKeyboardShortcuts.codeBlock,
+      quote: defaultKeyboardShortcuts.quote,
+      strikethrough: defaultKeyboardShortcuts.strikethrough
+    }).toEqual({
+      paragraph: "Mod+Shift+0",
+      heading1: "Mod+Shift+1",
+      heading2: "Mod+Shift+2",
+      heading3: "Mod+Shift+3",
+      bulletList: "Mod+Shift+5",
+      orderedList: "Mod+Shift+6",
+      codeBlock: "Mod+Shift+8",
+      quote: "Mod+Shift+9",
+      strikethrough: "Mod+Shift+S"
+    });
+
+    expect(normalizeKeyboardShortcuts({
+      ...defaultKeyboardShortcuts,
+      paragraph: "Mod+Alt+0",
+      heading1: "Mod+Alt+1",
+      heading2: "Mod+Alt+2",
+      heading3: "Mod+Alt+3",
+      bulletList: "Mod+Shift+8",
+      orderedList: "Mod+Shift+7",
+      codeBlock: "Mod+Alt+C",
+      quote: "Mod+Shift+B",
+      strikethrough: "Mod+Shift+X"
+    })).toEqual(defaultKeyboardShortcuts);
+  });
+
+  it("preserves an explicit custom binding that collides with a new format default", () => {
+    const normalized = normalizeKeyboardShortcuts({
+      paragraph: "Mod+Shift+1"
+    });
+
+    expect(normalized.paragraph).toBe("Mod+Shift+1");
+    expect(normalized.heading1).toBe("Mod+Alt+1");
+
+    const occupiedFirstFallback = normalizeKeyboardShortcuts({
+      paragraph: "Mod+Shift+1",
+      bold: "Mod+Alt+1"
+    });
+    expect(occupiedFirstFallback.paragraph).toBe("Mod+Shift+1");
+    expect(occupiedFirstFallback.bold).toBe("Mod+Alt+1");
+    expect(occupiedFirstFallback.heading1).toBe("Mod+Shift+Alt+1");
+
+    const strikeCollision = normalizeKeyboardShortcuts({ bold: "Mod+Shift+S" });
+    expect(strikeCollision.bold).toBe("Mod+Shift+S");
+    expect(strikeCollision.strikethrough).toBe("Mod+Shift+X");
+  });
+
+  it("keeps the fixed task-list and Save As chords unavailable to custom bindings", () => {
+    const taskList = normalizeKeyboardShortcuts({ bold: "Mod+Shift+4" });
+    const saveAs = normalizeKeyboardShortcuts({ bold: "Mod+Shift+Alt+S" });
+
+    expect(taskList.bold).toBe(defaultKeyboardShortcuts.bold);
+    expect(saveAs.bold).toBe(defaultKeyboardShortcuts.bold);
+  });
+
   it("includes manual sync as a configurable application shortcut", () => {
     expect(keyboardShortcutActions).toContain("syncNow");
     expect(defaultKeyboardShortcuts.syncNow).toBe("Mod+Alt+R");

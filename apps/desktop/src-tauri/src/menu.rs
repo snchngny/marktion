@@ -790,7 +790,7 @@ fn create_application_menu_for_language<R: tauri::Runtime>(
         app,
         "saveDocumentAs",
         labels.save_document_as,
-        "CmdOrCtrl+Shift+S",
+        "CmdOrCtrl+Shift+Alt+S",
     )?;
     let sync_now = app_menu_item(
         app,
@@ -832,7 +832,7 @@ fn create_application_menu_for_language<R: tauri::Runtime>(
         app,
         "formatStrikethrough",
         labels.strikethrough,
-        &menu_accelerator(accelerators, "formatStrikethrough", "CmdOrCtrl+Shift+X"),
+        &menu_accelerator(accelerators, "formatStrikethrough", "CmdOrCtrl+Shift+S"),
     )?;
     let inline_code = app_menu_item(
         app,
@@ -844,49 +844,49 @@ fn create_application_menu_for_language<R: tauri::Runtime>(
         app,
         "formatParagraph",
         labels.paragraph,
-        &menu_accelerator(accelerators, "formatParagraph", "CmdOrCtrl+Alt+0"),
+        &menu_accelerator(accelerators, "formatParagraph", "CmdOrCtrl+Shift+0"),
     )?;
     let heading_1 = app_menu_item(
         app,
         "formatHeading1",
         labels.heading_1,
-        &menu_accelerator(accelerators, "formatHeading1", "CmdOrCtrl+Alt+1"),
+        &menu_accelerator(accelerators, "formatHeading1", "CmdOrCtrl+Shift+1"),
     )?;
     let heading_2 = app_menu_item(
         app,
         "formatHeading2",
         labels.heading_2,
-        &menu_accelerator(accelerators, "formatHeading2", "CmdOrCtrl+Alt+2"),
+        &menu_accelerator(accelerators, "formatHeading2", "CmdOrCtrl+Shift+2"),
     )?;
     let heading_3 = app_menu_item(
         app,
         "formatHeading3",
         labels.heading_3,
-        &menu_accelerator(accelerators, "formatHeading3", "CmdOrCtrl+Alt+3"),
+        &menu_accelerator(accelerators, "formatHeading3", "CmdOrCtrl+Shift+3"),
     )?;
     let bullet_list = app_menu_item(
         app,
         "formatBulletList",
         labels.bullet_list,
-        &menu_accelerator(accelerators, "formatBulletList", "CmdOrCtrl+Shift+8"),
+        &menu_accelerator(accelerators, "formatBulletList", "CmdOrCtrl+Shift+5"),
     )?;
     let ordered_list = app_menu_item(
         app,
         "formatOrderedList",
         labels.ordered_list,
-        &menu_accelerator(accelerators, "formatOrderedList", "CmdOrCtrl+Shift+7"),
+        &menu_accelerator(accelerators, "formatOrderedList", "CmdOrCtrl+Shift+6"),
     )?;
     let quote = app_menu_item(
         app,
         "formatQuote",
         labels.quote,
-        &menu_accelerator(accelerators, "formatQuote", "CmdOrCtrl+Shift+B"),
+        &menu_accelerator(accelerators, "formatQuote", "CmdOrCtrl+Shift+9"),
     )?;
     let code_block = app_menu_item(
         app,
         "formatCodeBlock",
         labels.code_block,
-        &menu_accelerator(accelerators, "formatCodeBlock", "CmdOrCtrl+Alt+C"),
+        &menu_accelerator(accelerators, "formatCodeBlock", "CmdOrCtrl+Shift+8"),
     )?;
     let link = app_menu_item(
         app,

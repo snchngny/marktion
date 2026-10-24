@@ -56,22 +56,22 @@ export type KeyboardShortcutMap = Partial<Record<KeyboardShortcutAction, string>
 
 export const defaultKeyboardShortcuts: KeyboardShortcutBindings = {
   bold: "Mod+B",
-  bulletList: "Mod+Shift+8",
-  codeBlock: "Mod+Alt+C",
-  heading1: "Mod+Alt+1",
-  heading2: "Mod+Alt+2",
-  heading3: "Mod+Alt+3",
+  bulletList: "Mod+Shift+5",
+  codeBlock: "Mod+Shift+8",
+  heading1: "Mod+Shift+1",
+  heading2: "Mod+Shift+2",
+  heading3: "Mod+Shift+3",
   image: "Mod+Shift+I",
   inlineCode: "Mod+E",
   italic: "Mod+I",
   link: "Mod+K",
-  orderedList: "Mod+Shift+7",
+  orderedList: "Mod+Shift+6",
   pastePlainText: "Mod+Shift+V",
-  paragraph: "Mod+Alt+0",
+  paragraph: "Mod+Shift+0",
   openQuickOpen: "Mod+P",
-  quote: "Mod+Shift+B",
+  quote: "Mod+Shift+9",
   syncNow: "Mod+Alt+R",
-  strikethrough: "Mod+Shift+X",
+  strikethrough: "Mod+Shift+S",
   table: "Mod+Shift+Alt+T",
   toggleAiAgent: "Mod+Alt+J",
   toggleAiCommand: "Mod+Shift+J",
@@ -86,6 +86,15 @@ export const defaultKeyboardShortcuts: KeyboardShortcutBindings = {
 };
 
 const previousDefaultKeyboardShortcuts: Partial<KeyboardShortcutBindings> = {
+  bulletList: "Mod+Shift+8",
+  codeBlock: "Mod+Alt+C",
+  heading1: "Mod+Alt+1",
+  heading2: "Mod+Alt+2",
+  heading3: "Mod+Alt+3",
+  orderedList: "Mod+Shift+7",
+  paragraph: "Mod+Alt+0",
+  quote: "Mod+Shift+B",
+  strikethrough: "Mod+Shift+X",
   table: "Mod+Alt+T",
   toggleAiAgent: "Mod+Shift+A",
   toggleSourceMode: "Mod+Alt+V",
@@ -93,6 +102,15 @@ const previousDefaultKeyboardShortcuts: Partial<KeyboardShortcutBindings> = {
 };
 
 const introducedKeyboardShortcutFallbacks: Partial<Record<KeyboardShortcutAction, readonly string[]>> = {
+  bulletList: ["Mod+Shift+8", "Mod+Shift+Alt+5", "Mod+Alt+5"],
+  codeBlock: ["Mod+Alt+C", "Mod+Shift+Alt+8", "Mod+Alt+8"],
+  heading1: ["Mod+Alt+1", "Mod+Shift+Alt+1", "Mod+Alt+5"],
+  heading2: ["Mod+Alt+2", "Mod+Shift+Alt+2", "Mod+Alt+6"],
+  heading3: ["Mod+Alt+3", "Mod+Shift+Alt+3", "Mod+Alt+7"],
+  orderedList: ["Mod+Shift+7", "Mod+Shift+Alt+6", "Mod+Alt+9"],
+  paragraph: ["Mod+Alt+0", "Mod+Shift+Alt+0", "Mod+Alt+4"],
+  quote: ["Mod+Shift+B", "Mod+Shift+Alt+9", "Mod+Alt+Q"],
+  strikethrough: ["Mod+Shift+X", "Mod+Shift+Alt+X", "Mod+Alt+X"],
   toggleTypewriterMode: [
     "Mod+Shift+Alt+Y",
     "Mod+Shift+Alt+U",
@@ -123,11 +141,12 @@ const reservedKeyboardShortcutChords = new Set([
   "Mod+Alt+F",
   "Mod+Alt+P",
   "Mod+Alt+W",
+  "Mod+Shift+4",
   "Mod+Shift+E",
   "Mod+Shift+F",
   "Mod+Shift+O",
-  "Mod+Shift+S",
-  "Mod+Shift+Z"
+  "Mod+Shift+Z",
+  "Mod+Shift+Alt+S"
 ]);
 
 export type ParsedKeyboardShortcut = {
