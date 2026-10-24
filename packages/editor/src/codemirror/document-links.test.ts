@@ -66,17 +66,17 @@ afterEach(() => {
 describe("documentLinksPlugin", () => {
   it("opens for [[query and filters host-provided document items", () => {
     const source = vi.fn(() => items);
-    const doc = "See [[markra";
+    const doc = "See [[marktion";
     const view = createView({ doc, source });
     const menu = getMarkraDocumentLinksState(view);
 
     expect(source).toHaveBeenCalledWith(
-      expect.objectContaining({ query: "markra", state: view.state, view }),
+      expect.objectContaining({ query: "marktion", state: view.state, view }),
     );
     expect(menu).toMatchObject({
       from: 4,
       open: true,
-      query: "markra",
+      query: "marktion",
       selectedIndex: 0,
       to: doc.length,
     });

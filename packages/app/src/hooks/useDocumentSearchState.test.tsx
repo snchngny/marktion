@@ -30,13 +30,13 @@ describe("useDocumentSearchState", () => {
   it("tracks query and case sensitivity while resetting the active match", () => {
     const { result } = renderHook(() => useDocumentSearchState({
       available: true,
-      sourceContent: "marktion markra MARKRA",
+      sourceContent: "Alpha alpha ALPHA",
       surface: "source"
     }));
 
     act(() => {
       result.current.openSearch();
-      result.current.setQuery("markra");
+      result.current.setQuery("alpha");
     });
     act(() => {
       result.current.navigate(1);
@@ -49,7 +49,7 @@ describe("useDocumentSearchState", () => {
 
     expect(result.current.activeIndex).toBe(0);
     expect(result.current.matchCount).toBe(1);
-    expect(result.current.activeMatch).toEqual({ from: 7, to: 13 });
+    expect(result.current.activeMatch).toEqual({ from: 6, to: 11 });
   });
 
   it("switches between source and visual matches", () => {
