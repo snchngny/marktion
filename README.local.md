@@ -26,6 +26,12 @@ fenced/indented code、frontmatter、table、blockquoteでは通常の2 spaces�
 - [CodeMirror Markdown language](https://github.com/codemirror/lang-markdown)
 - [Logseq Markdown syntax](https://github.com/logseq/logseq/blob/master/docs/logseq-markdown-syntax.md)
 
+## 視覚編集のブロック操作
+
+視覚編集面ではEscapeで現在のMarkdownブロックを選択し、Shift+↑/↓で隣接ブロックを選択範囲へ加えます。ブロック選択中にCtrl+Aを押すと文書全体へ広がり、Escapeで選択を解除します。Enterは内容を変更せず選択ブロックの先頭へ編集カーソルを戻します。Ctrl+Dで複製し、Backspace/Deleteで削除、Ctrl+Shift+↑/↓で隣へ移動します。各文書変更は一度のUndoで戻せます。Ctrl+Shift+4は既存のtask-list変換を実行します。
+
+ネストしたlist itemは現在カーソルの最も内側のitemを選択します。親itemを選んだ場合は子孫を含めて一つのブロックとして扱い、子itemを重複選択しません。ブロックの拡張・移動はlist内で同じ親と深さの兄弟に限ります。frontmatter、コード、表、HTML、数式、Mermaid内はブロック選択操作を開始しません。既存の通常テキスト範囲選択、IME変換、read-only動作は優先します。このキー操作は視覚編集面だけで有効で、Markdown source modeには追加しません。
+
 ## Callout解析の共有
 
 `packages/editor/src/codemirror/callout-preview.ts`では、同じCodeMirror文書に対するCalloutの行走査結果を`WeakMap<Text, ...>`で共有します。spacing用StateFieldと表示用ViewPluginが別々に呼ばれても、同じ不変`Text`の間は1回だけ解析します。本文変更時は下記の安全条件を満たす通常入力なら位置をmapし、それ以外は新しい`Text`をキーに解析し直します。選択・focus・viewport更新では再解析しません。

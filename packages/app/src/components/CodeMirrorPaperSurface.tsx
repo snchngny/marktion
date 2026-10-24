@@ -1,5 +1,6 @@
 import {
   blocksPlugin,
+  blockSelectionPlugin,
   codeMirrorBlockDragPlugin,
   calloutPreviewPlugin,
   codeMirrorClipboardAssetsPlugin,
@@ -295,6 +296,7 @@ function markdownExtension({
       }),
       ...(linkOptions ? [linksPlugin(linkOptions)] : []),
       mathPreviewPlugin(),
+      blockSelectionPlugin(),
       markdownEditingPlugin(),
       markdownShortcutsPlugin({
         openSpellcheckSuggestions,

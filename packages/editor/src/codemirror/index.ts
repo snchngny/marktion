@@ -146,6 +146,7 @@ export {
   markraHighlight,
 } from "./highlight.ts";
 export { horizontalRulePlugin } from "./horizontal-rule.ts";
+export { blockSelectionPlugin } from "./block-selection.ts";
 export {
   clearCodeMirrorLocationCue,
   codeMirrorLocationCue,

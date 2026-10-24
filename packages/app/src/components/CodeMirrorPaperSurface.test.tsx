@@ -2,6 +2,7 @@ import {
   defineMarkraPlugin,
   getMarkraDocumentLinksState,
   getMarkraSlashMenuState,
+  listMarkraPlugins,
   runMarkraCommand,
   showCodeMirrorAiPreview,
   showCodeMirrorAiSelectionHold,
@@ -55,6 +56,37 @@ describe("CodeMirrorPaperSurface", () => {
 
     unmount();
     expect(onEditorReady).toHaveBeenLastCalledWith(null, view);
+  });
+
+  it("installs block selection in the visual Markdown surface", () => {
+    const onEditorReady = vi.fn();
+    render(
+      <CodeMirrorPaperSurface
+        initialContent="First paragraph"
+        onEditorReady={onEditorReady}
+        onMarkdownChange={() => {}}
+      />,
+    );
+    const view = onEditorReady.mock.calls[0]?.[0] as EditorView;
+    expect(listMarkraPlugins(view.state).some((plugin) => plugin.id === "markra.block-selection")).toBe(true);
+
+    act(() => {
+      view.dispatch({ selection: EditorSelection.cursor(0) });
+      expect(runScopeHandlers(view, new KeyboardEvent("keydown", {
+        bubbles: true,
+        ctrlKey: true,
+        key: "a",
+      }), "editor")).toBe(true);
+    });
+    expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe("First paragraph");
+    act(() => {
+      expect(runScopeHandlers(view, new KeyboardEvent("keydown", {
+        bubbles: true,
+        key: "Enter",
+      }), "editor")).toBe(true);
+    });
+    expect(view.state.doc.toString()).toBe("First paragraph");
+    expect(view.state.selection.main.empty).toBe(true);
   });
 
   it("keeps configurable paragraph rhythm in measured block spacers", async () => {
