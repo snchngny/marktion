@@ -1,793 +1,87 @@
-name: Release
+name: Windows build
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: Release tag to build and publish, for example v0.1.0
-        required: true
-        type: string
-      draft:
-        description: Publish as draft release
-        required: false
-        default: false
-        type: boolean
   push:
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
-
-env:
-  APP_SLUG: markra
-  APP_PRODUCT_NAME: Markra
-  DESKTOP_DIR: apps/desktop
-  NODE_VERSION: 24
-  PNPM_VERSION: 10.30.3
-  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+  group: windows-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: macOS (Apple Silicon)
-            artifact_name: macOS-apple-silicon
-            os: macos-26
-            target: aarch64-apple-darwin
-            asset_platform: macos
-            asset_arch: arm64
-            updater_platform: darwin-aarch64
-            args: --target aarch64-apple-darwin
-          - name: macOS (Intel)
-            artifact_name: macOS-intel
-            os: macos-26-intel
-            target: x86_64-apple-darwin
-            asset_platform: macos
-            asset_arch: x64
-            updater_platform: darwin-x86_64
-            args: --target x86_64-apple-darwin
-          - name: Linux (x64)
-            artifact_name: Linux-x64
-            os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            asset_platform: linux
-            asset_arch: x64
-            updater_platform: linux-x86_64
-            appimagetool_arch: x86_64
-            appimage_arch: x86_64
-            args: --target x86_64-unknown-linux-gnu
-          - name: Linux (ARM64)
-            artifact_name: Linux-arm64
-            os: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-gnu
-            asset_platform: linux
-            asset_arch: arm64
-            updater_platform: linux-aarch64
-            appimagetool_arch: aarch64
-            appimage_arch: aarch64
-            args: --target aarch64-unknown-linux-gnu
-          - name: Windows (x64)
-            artifact_name: Windows-x64
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
-            asset_platform: windows
-            asset_arch: x64
-            updater_platform: windows-x86_64
-            args: --target x86_64-pc-windows-msvc
-
-    name: Build ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
-
+    runs-on: windows-latest
+    timeout-minutes: 60
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ env.RELEASE_TAG }}
-
-      - name: Checkout release scripts
-        uses: actions/checkout@v4
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
         with:
-          ref: ${{ github.sha }}
-          path: .release-scripts
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+          version: 10.30.3
+      - uses: actions/setup-node@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 24
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Validate release version
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          node <<'NODE'
-          const fs = require("fs");
-          const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-          const desktopDir = process.env.DESKTOP_DIR;
-          const desktopPackageJson = JSON.parse(fs.readFileSync(`${desktopDir}/package.json`, "utf8"));
-          const webPackageJson = JSON.parse(fs.readFileSync("apps/web/package.json", "utf8"));
-          const tauriConfig = JSON.parse(fs.readFileSync(`${desktopDir}/src-tauri/tauri.conf.json`, "utf8"));
-          const cargoToml = fs.readFileSync(`${desktopDir}/src-tauri/Cargo.toml`, "utf8");
-          const cargoVersion = cargoToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
-          const tagName = process.env.RELEASE_TAG;
-          const expectedTag = `v${packageJson.version}`;
-
-          if (tagName !== expectedTag) {
-            throw new Error(`Release tag ${tagName} does not match package version ${expectedTag}.`);
-          }
-
-          if (desktopPackageJson.version !== packageJson.version) {
-            throw new Error(`Desktop package version ${desktopPackageJson.version} does not match package version ${packageJson.version}.`);
-          }
-
-          if (webPackageJson.version !== packageJson.version) {
-            throw new Error(`Web package version ${webPackageJson.version} does not match package version ${packageJson.version}.`);
-          }
-
-          if (tauriConfig.version !== packageJson.version) {
-            throw new Error(`Tauri version ${tauriConfig.version} does not match package version ${packageJson.version}.`);
-          }
-
-          if (cargoVersion !== packageJson.version) {
-            throw new Error(`Cargo version ${cargoVersion} does not match package version ${packageJson.version}.`);
-          }
-          NODE
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
         with:
-          targets: ${{ matrix.target }}
-
-      - name: Restore Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: ${{ env.DESKTOP_DIR }}/src-tauri -> target
-          cache-bin: false
-
-      - name: Install Linux system dependencies
-        if: matrix.asset_platform == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            curl \
-            file \
-            libayatana-appindicator3-dev \
-            libwebkit2gtk-4.1-dev \
-            librsvg2-dev \
-            libssl-dev \
-            libxdo-dev \
-            patchelf
-
-      - name: Install frontend dependencies
+          workspaces: apps/desktop/src-tauri -> target
+      - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Resolve updater endpoint
-        id: updater_endpoint
-        shell: bash
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+      - name: Test editor and shared commands
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         run: |
-          set -euo pipefail
-
-          endpoint="$(node .release-scripts/scripts/release/resolve-updater-endpoint.mjs)"
-          echo "endpoint=${endpoint}" >> "${GITHUB_OUTPUT}"
-
-      - name: Prepare updater config
-        shell: bash
-        env:
-          TAURI_UPDATER_ENDPOINT: ${{ steps.updater_endpoint.outputs.endpoint }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
-        run: |
-          set -euo pipefail
-
-          node <<'NODE'
-          const fs = require("fs");
-          const path = require("path");
-
-          const desktopDir = process.env.DESKTOP_DIR;
-          const endpoint = process.env.TAURI_UPDATER_ENDPOINT;
-          const privateKey = process.env.TAURI_SIGNING_PRIVATE_KEY?.trim();
-          const publicKey = process.env.TAURI_UPDATER_PUBLIC_KEY?.trim();
-
-          if (!privateKey) {
-            throw new Error("Missing TAURI_SIGNING_PRIVATE_KEY repository secret for signed updater artifacts.");
-          }
-
-          if (!publicKey) {
-            throw new Error("Missing TAURI_UPDATER_PUBLIC_KEY repository secret for updater verification.");
-          }
-
-          const updaterConfig = {
-            bundle: {
-              createUpdaterArtifacts: true
-            },
-            plugins: {
-              updater: {
-                endpoints: [endpoint],
-                pubkey: publicKey,
-                windows: {
-                  installMode: "passive"
-                }
-              }
-            }
-          };
-
-          fs.writeFileSync(path.join(desktopDir, "tauri.updater.conf.json"), `${JSON.stringify(updaterConfig, null, 2)}\n`);
-          NODE
-
-      - name: Resolve Tauri build args
-        id: tauri_args
-        shell: bash
-        env:
-          ASSET_PLATFORM: ${{ matrix.asset_platform }}
-          RELEASE_TAG: ${{ env.RELEASE_TAG }}
-          TAURI_BUILD_ARGS: ${{ matrix.args }}
-        run: |
-          set -euo pipefail
-
-          tauri_args="$(node .release-scripts/scripts/release/resolve-tauri-build-args.mjs)"
-          echo "args=${tauri_args}" >> "${GITHUB_OUTPUT}"
-
-      - name: Import Apple Developer ID certificate
-        if: startsWith(matrix.os, 'macos-')
-        shell: bash
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          set -euo pipefail
-
-          : "${APPLE_CERTIFICATE:?Missing APPLE_CERTIFICATE secret}"
-          : "${APPLE_CERTIFICATE_PASSWORD:?Missing APPLE_CERTIFICATE_PASSWORD secret}"
-          : "${APPLE_SIGNING_IDENTITY:?Missing APPLE_SIGNING_IDENTITY secret}"
-          : "${KEYCHAIN_PASSWORD:?Missing KEYCHAIN_PASSWORD secret}"
-
-          certificate_path="${RUNNER_TEMP}/developer-id.p12"
-          keychain_path="${RUNNER_TEMP}/app-signing.keychain-db"
-
-          echo "${APPLE_CERTIFICATE}" | base64 --decode > "${certificate_path}"
-          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${keychain_path}"
-          security set-keychain-settings -lut 21600 "${keychain_path}"
-          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${keychain_path}"
-          security import "${certificate_path}" -k "${keychain_path}" -P "${APPLE_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign -T /usr/bin/security
-          security list-keychains -d user -s "${keychain_path}"
-          security default-keychain -s "${keychain_path}"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${KEYCHAIN_PASSWORD}" "${keychain_path}"
-
-          if ! security find-identity -v -p codesigning "${keychain_path}" | grep -F "${APPLE_SIGNING_IDENTITY}"; then
-            echo "Apple signing identity was not found in the imported keychain." >&2
-            exit 1
-          fi
-
-          echo "APPLE_SIGNING_IDENTITY=${APPLE_SIGNING_IDENTITY}" >> "${GITHUB_ENV}"
-
-      - name: Prepare Apple notarization key
-        if: startsWith(matrix.os, 'macos-')
-        shell: bash
-        env:
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_PRIVATE_KEY: ${{ secrets.APPLE_API_KEY_PRIVATE_KEY }}
-        run: |
-          set -euo pipefail
-
-          : "${APPLE_API_ISSUER:?Missing APPLE_API_ISSUER secret}"
-          : "${APPLE_API_KEY:?Missing APPLE_API_KEY secret}"
-          : "${APPLE_API_KEY_PRIVATE_KEY:?Missing APPLE_API_KEY_PRIVATE_KEY secret}"
-
-          api_key_path="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY}.p8"
-          printf "%s" "${APPLE_API_KEY_PRIVATE_KEY}" > "${api_key_path}"
-          chmod 600 "${api_key_path}"
-          echo "APPLE_API_ISSUER=${APPLE_API_ISSUER}" >> "${GITHUB_ENV}"
-          echo "APPLE_API_KEY=${APPLE_API_KEY}" >> "${GITHUB_ENV}"
-          echo "APPLE_API_KEY_PATH=${api_key_path}" >> "${GITHUB_ENV}"
-
-      - name: Build and bundle app
-        id: tauri_build
-        uses: tauri-apps/tauri-action@v0.6.0
-        env:
-          LINUXDEPLOY_EXCLUDED_LIBRARIES: libwayland-client.so*
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          projectPath: ${{ env.DESKTOP_DIR }}
-          args: ${{ steps.tauri_args.outputs.args }} --config tauri.updater.conf.json
-
-      - name: Diagnose Windows MSI linker failure
-        if: failure() && matrix.asset_platform == 'windows'
-        continue-on-error: true
+          pnpm --filter @markra/shared test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm --filter @markra/editor test --maxWorkers=1 --no-file-parallelism
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build Windows executable and installer
+        run: pnpm tauri build --bundles nsis -- --locked
+      - name: Prepare downloadable files
         shell: pwsh
-        env:
-          TARGET: ${{ matrix.target }}
         run: |
-          $wixToolsDir = Join-Path $env:LOCALAPPDATA "tauri\WixTools314"
-          $wixBuildDir = Join-Path $env:DESKTOP_DIR "src-tauri\target\$env:TARGET\release\wix\x64"
-          $lightExe = Join-Path $wixToolsDir "light.exe"
-          $localePath = Join-Path $wixBuildDir "locale.wxl"
-          $outputPath = Join-Path $wixBuildDir "diagnostic.msi"
-          $wixObjects = Get-ChildItem $wixBuildDir -Filter "*.wixobj" | ForEach-Object FullName
-
-          Write-Host "Re-running WiX linker with $($wixObjects.Count) object files from $wixBuildDir"
-          & $lightExe `
-            -ext (Join-Path $wixToolsDir "WixUIExtension.dll") `
-            -ext (Join-Path $wixToolsDir "WixUtilExtension.dll") `
-            -o $outputPath `
-            "-cultures:en-us" `
-            -loc $localePath `
-            $wixObjects
-          exit $LASTEXITCODE
-
-      - name: Verify macOS Quick Look extension
-        if: startsWith(matrix.os, 'macos-')
-        shell: bash
-        env:
-          TARGET: ${{ matrix.target }}
-        run: pnpm --filter @markra/desktop verify:quicklook-bundle
-
-      - name: Rebuild Linux AppImage library policy
-        if: matrix.asset_platform == 'linux'
-        shell: bash
-        env:
-          APPIMAGETOOL_ARCH: ${{ matrix.appimagetool_arch }}
-          APPIMAGE_ARCH: ${{ matrix.appimage_arch }}
-          APPIMAGE_APPDIR: ${{ env.DESKTOP_DIR }}/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/${{ env.APP_PRODUCT_NAME }}.AppDir
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-
-          appimage_dir="$(dirname "${APPIMAGE_APPDIR}")"
-          appimage_path="$(find "${appimage_dir}" -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
-
-          if [[ -z "${appimage_path}" ]]; then
-            echo "No AppImage artifact found in ${appimage_dir}" >&2
-            exit 1
-          fi
-
-          node .release-scripts/scripts/release/repair-linux-appimage-libraries.mjs "${APPIMAGE_APPDIR}"
-          node .release-scripts/scripts/release/repair-linux-appimage-gtk-ime.mjs "${APPIMAGE_APPDIR}"
-          node .release-scripts/scripts/release/verify-linux-appimage-libraries.mjs "${APPIMAGE_APPDIR}"
-          node .release-scripts/scripts/release/verify-linux-appimage-gtk-ime.mjs "${APPIMAGE_APPDIR}"
-
-          rm -f "${appimage_path}.sig" "${appimage_path}.tar.gz" "${appimage_path}.tar.gz.sig"
-
-          appimagetool="${RUNNER_TEMP}/appimagetool-${APPIMAGETOOL_ARCH}.AppImage"
-          curl -fsSL \
-            "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-${APPIMAGETOOL_ARCH}.AppImage" \
-            -o "${appimagetool}"
-          chmod +x "${appimagetool}"
-
-          APPIMAGE_EXTRACT_AND_RUN=1 ARCH="${APPIMAGE_ARCH}" "${appimagetool}" "${APPIMAGE_APPDIR}" "${appimage_path}"
-          "${DESKTOP_DIR}/node_modules/.bin/tauri" signer sign "${appimage_path}" > "${appimage_path}.sig"
-
-      - name: Verify Linux AppImage library policy
-        if: matrix.asset_platform == 'linux'
-        shell: bash
-        env:
-          APPIMAGE_APPDIR: ${{ env.DESKTOP_DIR }}/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/${{ env.APP_PRODUCT_NAME }}.AppDir
-        run: |
-          node .release-scripts/scripts/release/verify-linux-appimage-libraries.mjs
-          node .release-scripts/scripts/release/verify-linux-appimage-gtk-ime.mjs
-
-      - name: Normalize release asset names
-        shell: bash
-        env:
-          ASSET_ARCH: ${{ matrix.asset_arch }}
-          ASSET_PLATFORM: ${{ matrix.asset_platform }}
-          RELEASE_VERSION: ${{ env.RELEASE_TAG }}
-          TARGET: ${{ matrix.target }}
-        run: node .release-scripts/scripts/release/normalize-release-artifacts.mjs
-
-      - name: Sign Windows portable bundle
-        if: matrix.asset_platform == 'windows'
-        shell: bash
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-
-          portable_path="$(find "${DESKTOP_DIR}/src-tauri/target/${{ matrix.target }}/release/bundle/portable" -maxdepth 1 -type f -name '*_portable.zip' -print -quit)"
-          if [[ -z "${portable_path}" ]]; then
-            echo "Windows portable bundle was not found." >&2
-            exit 1
-          fi
-
-          "${DESKTOP_DIR}/node_modules/.bin/tauri" signer sign "${portable_path}"
-          test -s "${portable_path}.sig"
-
-      - name: Collect bundle paths
-        id: bundle_paths
-        shell: bash
-        env:
-          ARTIFACT_PATHS_JSON: ${{ steps.tauri_build.outputs.artifactPaths }}
-          DESKTOP_DIR: ${{ env.DESKTOP_DIR }}
-          TARGET: ${{ matrix.target }}
-        run: |
-          set -euo pipefail
-
-          node <<'NODE'
-          const fs = require("fs");
-          const path = require("path");
-          const artifactPathsJson = process.env.ARTIFACT_PATHS_JSON || "[]";
-          const desktopDir = process.env.DESKTOP_DIR;
-          const target = process.env.TARGET;
-          const bundleRoot = path.join(desktopDir, "src-tauri", "target", target, "release", "bundle");
-          const artifactPaths = [];
-          const seen = new Set();
-
-          function addArtifact(filePath) {
-            if (!filePath) return;
-            if (filePath.endsWith("/latest.json") || filePath.endsWith("\\latest.json")) return;
-
-            let artifactPath = filePath;
-            if (!path.isAbsolute(artifactPath) && !fs.existsSync(artifactPath)) {
-              artifactPath = path.join(desktopDir, artifactPath);
-            }
-
-            try {
-              if (!fs.statSync(artifactPath).isFile()) return;
-              artifactPath = fs.realpathSync(artifactPath);
-            } catch {
-              return;
-            }
-
-            if (!seen.has(artifactPath)) {
-              seen.add(artifactPath);
-              artifactPaths.push(artifactPath);
-            }
-          }
-
-          function collectBundleFiles(root) {
-            if (!fs.existsSync(root)) return;
-
-            const stack = [root];
-            const releaseFileSuffixes = [
-              ".app.tar.gz",
-              ".AppImage",
-              ".deb",
-              ".dmg",
-              ".exe",
-              ".msi",
-              ".pkg.tar.zst",
-              ".rpm",
-              ".sig",
-              ".tar.gz",
-              ".zip",
-            ];
-
-            function isReleaseFile(fileName) {
-              return releaseFileSuffixes.some((suffix) => fileName.endsWith(suffix));
-            }
-
-            while (stack.length > 0) {
-              const current = stack.pop();
-              const entries = fs.readdirSync(current, { withFileTypes: true });
-
-              for (const entry of entries) {
-                const entryPath = path.join(current, entry.name);
-
-                if (entry.isDirectory()) {
-                  stack.push(entryPath);
-                  continue;
-                }
-
-                if (isReleaseFile(entry.name)) {
-                  addArtifact(entryPath);
-                }
-              }
-            }
-          }
-
-          try {
-            const parsed = JSON.parse(artifactPathsJson);
-            if (Array.isArray(parsed)) {
-              for (const candidate of parsed) {
-                if (typeof candidate === "string") addArtifact(candidate);
-              }
-            }
-          } catch {
-            // Fall back to walking the Tauri bundle directory below.
-          }
-
-          collectBundleFiles(bundleRoot);
-
-          if (artifactPaths.length === 0) {
-            throw new Error("No release bundle artifacts were found.");
-          }
-
-          artifactPaths.sort();
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `paths<<__PATHS__\n${artifactPaths.join("\n")}\n__PATHS__\n`);
-          NODE
-
-      - name: Create updater metadata
-        shell: bash
-        env:
-          ARTIFACT_PATHS_RAW: ${{ steps.bundle_paths.outputs.paths }}
-          UPDATER_PLATFORM: ${{ matrix.updater_platform }}
-        run: node .release-scripts/scripts/release/create-updater-metadata.mjs
-
-      - name: Create Windows portable updater metadata
-        if: matrix.asset_platform == 'windows'
-        shell: bash
-        env:
-          ARTIFACT_PATHS_RAW: ${{ steps.bundle_paths.outputs.paths }}
-          OUTPUT_PATH: release-metadata.windows-portable-x86_64.json
-          UPDATER_PLATFORM: windows-portable-x86_64
-        run: node .release-scripts/scripts/release/create-updater-metadata.mjs
-
-      - name: Upload workflow artifacts
-        uses: actions/upload-artifact@v4
+          New-Item -ItemType Directory -Path release-files | Out-Null
+          Copy-Item apps/desktop/src-tauri/target/release/marktion.exe release-files/marktion.exe
+          Copy-Item apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe release-files/
+          Copy-Item LICENSE release-files/LICENSE.txt
+          git archive --format=zip --prefix=marktion/ -o release-files/marktion-source.zip HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem release-files -File | ForEach-Object {
+            $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+            "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+          } | Set-Content release-files/SHA256SUMS.txt -Encoding utf8
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_SLUG }}-${{ matrix.artifact_name }}-bundles
-          path: |
-            ${{ steps.bundle_paths.outputs.paths }}
-            release-metadata*.json
+          name: marktion-windows-x64-${{ github.sha }}
+          path: release-files/*
           if-no-files-found: error
+          retention-days: 30
 
-  publish_release:
-    name: Publish GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-
+    permissions:
+      contents: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
-          ref: ${{ env.RELEASE_TAG }}
-
-      - name: Checkout release scripts
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          path: .release-scripts
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Determine changelog range
-        id: changelog_range
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          previous_tag="$(git describe --tags --abbrev=0 "HEAD^" 2>/dev/null || true)"
-
-          if [[ -n "${previous_tag}" ]]; then
-            echo "from_ref=${previous_tag}" >> "${GITHUB_OUTPUT}"
-          else
-            first_commit="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
-            echo "from_ref=${first_commit}" >> "${GITHUB_OUTPUT}"
-          fi
-
-          echo "to_ref=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
-
-      - name: Generate release notes
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          pnpm dlx changelogen@latest \
-            --from "${{ steps.changelog_range.outputs.from_ref }}" \
-            --to "${{ steps.changelog_range.outputs.to_ref }}" \
-            --no-output \
-            > release-notes.md
-
-          if [[ ! -s release-notes.md ]]; then
-            {
-              echo "## Changes"
-              echo
-              echo "- Release ${RELEASE_TAG}"
-            } > release-notes.md
-          fi
-
-      - name: Download bundled artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: ${{ env.APP_SLUG }}-*-bundles
-          path: release-assets
-
-      - name: Prepare Arch Linux package
-        env:
-          ARCH_PACKAGE_DIR: generated/arch
-          RELEASE_ASSETS_ROOT: release-assets
-          RELEASE_VERSION: ${{ env.RELEASE_TAG }}
-        run: node .release-scripts/scripts/release/prepare-arch-package.mjs
-
-      - name: Build Arch Linux package
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          docker run --rm \
-            --platform linux/amd64 \
-            --user "$(id -u):$(id -g)" \
-            --env HOME=/tmp \
-            --volume "${PWD}/generated/arch:/pkg" \
-            --workdir /pkg \
-            archlinux:base-devel \
-            makepkg --noconfirm --nodeps
-
-          package_path="$(find generated/arch -maxdepth 1 -type f -name 'markra-*.pkg.tar.zst' -print -quit)"
-
-          if [[ -z "${package_path}" ]]; then
-            echo "Arch Linux package was not created." >&2
-            exit 1
-          fi
-
-          version="${RELEASE_TAG#v}"
-          cp "${package_path}" "release-assets/Markra_${version}_linux_x64.pkg.tar.zst"
-
-      - name: Generate updater manifest
-        env:
-          EXPECTED_UPDATER_PLATFORMS: darwin-aarch64,darwin-x86_64,linux-aarch64,linux-x86_64,windows-x86_64,windows-portable-x86_64
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          RELEASE_ASSETS_ROOT: release-assets
-          RELEASE_NOTES_PATH: release-notes.md
-          RELEASE_VERSION: ${{ env.RELEASE_TAG }}
-        run: |
-          set -euo pipefail
-          export RELEASE_VERSION="${RELEASE_VERSION#v}"
-          node .release-scripts/scripts/release/generate-updater-manifest.mjs
-
-      - name: Generate Homebrew cask
-        if: ${{ !contains(env.RELEASE_TAG, '-') }}
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          OUTPUT_PATH: generated/homebrew/Casks/markra.rb
-          RELEASE_ASSETS_ROOT: release-assets
-          RELEASE_VERSION: ${{ env.RELEASE_TAG }}
-        run: node .release-scripts/scripts/release/generate-homebrew-cask.mjs
-
-      - name: Upload Homebrew cask artifact
-        if: ${{ !contains(env.RELEASE_TAG, '-') }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APP_SLUG }}-homebrew-cask
-          path: generated/homebrew/Casks/markra.rb
-          if-no-files-found: error
-
-      - name: Collect release files
-        id: release_files
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Tauri leaves the deb package internals beside the finished installer.
-          # Publishing those generic filenames makes Linux architectures collide.
-          find release-assets -type f \
-            ! -name 'release-metadata.json' \
-            ! -name 'control.tar.gz' \
-            ! -name 'data.tar.gz' \
-            | sort > release-files.txt
-
-          {
-            echo 'paths<<__FILES__'
-            cat release-files.txt
-            echo '__FILES__'
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Publish release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: ${{ env.APP_PRODUCT_NAME }} ${{ env.RELEASE_TAG }}
-          body_path: release-notes.md
-          draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
-          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
-          overwrite_files: true
-          fail_on_unmatched_files: true
-          files: ${{ steps.release_files.outputs.paths }}
-
-      - name: Publish preview updater manifest
-        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.draft }}
-        shell: bash
+          name: marktion-windows-x64-${{ github.sha }}
+          path: release-files
+      - name: Publish tag release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          set -euo pipefail
-
-          if ! gh release view preview --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            gh release create preview \
-              --repo "${GITHUB_REPOSITORY}" \
-              --target "${GITHUB_SHA}" \
-              --title "${APP_PRODUCT_NAME} Preview Update Channel" \
-              --notes "Rolling updater manifest for Markra preview and stable releases." \
-              --prerelease
-          fi
-
-          gh release upload preview release-assets/latest.json --clobber --repo "${GITHUB_REPOSITORY}"
-
-      - name: Prepare Homebrew tap checkout
-        if: env.HOMEBREW_TAP_TOKEN != '' && !contains(env.RELEASE_TAG, '-')
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          tap_url="https://github.com/markrahq/homebrew-tap.git"
-          tap_branch=""
-
-          while read -r marker ref target; do
-            if [[ "${marker}" == "ref:" && "${target}" == "HEAD" ]]; then
-              tap_branch="${ref#refs/heads/}"
-              break
-            fi
-          done < <(git ls-remote --symref "${tap_url}" HEAD)
-
-          tap_branch="${tap_branch:-main}"
-          echo "HOMEBREW_TAP_BRANCH=${tap_branch}" >> "${GITHUB_ENV}"
-
-          if git ls-remote --exit-code --heads "${tap_url}" "${tap_branch}" >/dev/null 2>&1; then
-            git clone --depth 1 --branch "${tap_branch}" "${tap_url}" homebrew-tap
-          else
-            mkdir homebrew-tap
-            git -C homebrew-tap init -b "${tap_branch}"
-            git -C homebrew-tap remote add origin "${tap_url}"
-          fi
-
-      - name: Publish Homebrew cask to tap
-        if: env.HOMEBREW_TAP_TOKEN != '' && !contains(env.RELEASE_TAG, '-')
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          tap_branch="${HOMEBREW_TAP_BRANCH:-main}"
-          mkdir -p homebrew-tap/Casks
-          cp generated/homebrew/Casks/markra.rb homebrew-tap/Casks/markra.rb
-
-          if [[ -z "$(git -C homebrew-tap status --porcelain -- Casks/markra.rb)" ]]; then
-            echo "Homebrew cask is already up to date."
-            exit 0
-          fi
-
-          git -C homebrew-tap config user.name "github-actions[bot]"
-          git -C homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C homebrew-tap add Casks/markra.rb
-          git -C homebrew-tap commit -m "Update Markra cask to ${RELEASE_TAG}"
-          git -C homebrew-tap push -u "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/markrahq/homebrew-tap.git" "HEAD:${tap_branch}"
-
-  publish_winget:
-    name: Publish WinGet package
-    needs: publish_release
-    permissions:
-      contents: read
-    if: ${{ !contains(github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name, '-') && (github.event_name != 'workflow_dispatch' || !inputs.draft) }}
-    uses: ./.github/workflows/winget.yml
-    with:
-      tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
-    secrets:
-      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+          gh release create "$RELEASE_TAG" release-files/* --verify-tag \
+            --title "marktion $RELEASE_TAG" \
+            --notes 'Windows x64版。実行ファイルとインストーラーは未署名です。対応ソース・AGPLライセンス・SHA256SUMSを添付しています。'

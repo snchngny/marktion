@@ -8,7 +8,6 @@ import { fileURLToPath } from "node:url";
 import zlib from "node:zlib";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
-const releaseWorkflowPath = path.join(repoRoot, ".github", "workflows", "release.yml");
 
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "markra-release-assets-"));
@@ -56,81 +55,6 @@ function readZipEntries(archive) {
 
   return entries;
 }
-
-function readReleaseMatrixEntry(name) {
-  const workflow = fs.readFileSync(releaseWorkflowPath, "utf8");
-  const start = workflow.indexOf(`- name: ${name}`);
-
-  assert.notEqual(start, -1, `${name} matrix entry should exist`);
-
-  const next = workflow.indexOf("\n          - name:", start + 1);
-  return next === -1 ? workflow.slice(start) : workflow.slice(start, next);
-}
-
-function readReleaseStep(name) {
-  const workflow = fs.readFileSync(releaseWorkflowPath, "utf8");
-  const start = workflow.indexOf(`- name: ${name}`);
-
-  assert.notEqual(start, -1, `${name} release step should exist`);
-
-  const next = workflow.indexOf("\n      - name:", start + 1);
-  return next === -1 ? workflow.slice(start) : workflow.slice(start, next);
-}
-
-test("release workflow uses arm64 in Apple Silicon file names while keeping the Tauri updater platform", () => {
-  const appleSiliconEntry = readReleaseMatrixEntry("macOS (Apple Silicon)");
-
-  assert.match(appleSiliconEntry, /asset_arch:\s*arm64/);
-  assert.match(appleSiliconEntry, /updater_platform:\s*darwin-aarch64/);
-  assert.doesNotMatch(appleSiliconEntry, /asset_arch:\s*aarch64/);
-});
-
-test("release workflow builds Linux ARM64 bundles", () => {
-  const linuxArm64Entry = readReleaseMatrixEntry("Linux (ARM64)");
-
-  assert.match(linuxArm64Entry, /artifact_name:\s*Linux-arm64/);
-  assert.match(linuxArm64Entry, /os:\s*ubuntu-22\.04-arm/);
-  assert.match(linuxArm64Entry, /target:\s*aarch64-unknown-linux-gnu/);
-  assert.match(linuxArm64Entry, /asset_platform:\s*linux/);
-  assert.match(linuxArm64Entry, /asset_arch:\s*arm64/);
-  assert.match(linuxArm64Entry, /updater_platform:\s*linux-aarch64/);
-  assert.match(linuxArm64Entry, /args:\s*--target aarch64-unknown-linux-gnu/);
-});
-
-test("release workflow validates the web package version", () => {
-  const validateStep = readReleaseStep("Validate release version");
-
-  assert.match(validateStep, /apps\/web\/package\.json/);
-  assert.match(validateStep, /Web package version/);
-});
-
-test("release workflow excludes Wayland client from Linux AppImage bundling", () => {
-  const buildStep = readReleaseStep("Build and bundle app");
-  const rebuildStep = readReleaseStep("Rebuild Linux AppImage library policy");
-  const verifyStep = readReleaseStep("Verify Linux AppImage library policy");
-
-  assert.match(buildStep, /LINUXDEPLOY_EXCLUDED_LIBRARIES:\s*libwayland-client\.so\*/);
-  assert.match(rebuildStep, /if:\s*matrix\.asset_platform == 'linux'/);
-  assert.match(rebuildStep, /repair-linux-appimage-libraries\.mjs/);
-  assert.match(rebuildStep, /repair-linux-appimage-gtk-ime\.mjs/);
-  assert.match(rebuildStep, /APPIMAGETOOL_ARCH:\s*\$\{\{ matrix\.appimagetool_arch \}\}/);
-  assert.match(rebuildStep, /APPIMAGE_ARCH:\s*\$\{\{ matrix\.appimage_arch \}\}/);
-  assert.match(rebuildStep, /appimagetool-\$\{APPIMAGETOOL_ARCH\}\.AppImage/);
-  assert.match(rebuildStep, /ARCH="\$\{APPIMAGE_ARCH\}"/);
-  assert.match(rebuildStep, /tauri" signer sign/);
-  assert.match(verifyStep, /if:\s*matrix\.asset_platform == 'linux'/);
-  assert.match(verifyStep, /verify-linux-appimage-libraries\.mjs/);
-  assert.match(verifyStep, /verify-linux-appimage-gtk-ime\.mjs/);
-});
-
-test("release workflow signs the Windows portable bundle", () => {
-  const signStep = readReleaseStep("Sign Windows portable bundle");
-
-  assert.match(signStep, /if:\s*matrix\.asset_platform == 'windows'/);
-  assert.match(signStep, /tauri" signer sign/);
-  assert.match(signStep, /portable\.zip/);
-  assert.match(signStep, /portable_path.*\.sig/);
-});
 
 test("normalize-release-artifacts adds macOS platform labels to updater and dmg assets", () => {
   const rootDir = makeTempDir();

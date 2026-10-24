@@ -406,7 +406,7 @@ fn shell_command_status() -> ShellCommandStatus {
 fn install_command_at(command_path: &Path, target_path: &Path) -> Result<(), String> {
     if command_path.is_file() && managed_target_from_command(command_path).is_none() {
         return Err(format!(
-            "A different markra command already exists at {}.",
+            "A different marktion command already exists at {}.",
             path_to_string(command_path)
         ));
     }
@@ -442,7 +442,7 @@ pub(crate) fn install_shell_command() -> Result<ShellCommandStatus, String> {
     let status = shell_command_status_for_target(&target_path);
 
     if status.status == "conflict" {
-        return Err("A different markra command already exists on PATH.".to_string());
+        return Err("A different marktion command already exists on PATH.".to_string());
     }
 
     let command_path = status
@@ -451,7 +451,7 @@ pub(crate) fn install_shell_command() -> Result<ShellCommandStatus, String> {
         .map(PathBuf::from)
         .or_else(preferred_command_path)
         .ok_or_else(|| {
-            "No writable PATH directory is available for installing markra.".to_string()
+            "No writable PATH directory is available for installing marktion.".to_string()
         })?;
 
     install_command_at(&command_path, &target_path)?;

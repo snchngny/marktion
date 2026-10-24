@@ -228,7 +228,7 @@ describe("GeneralSettings", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Install markra command" }));
+    fireEvent.click(screen.getByRole("button", { name: "Install marktion command" }));
     expect(onInstallShellCommand).toHaveBeenCalledTimes(1);
 
     rerender(
@@ -241,7 +241,7 @@ describe("GeneralSettings", () => {
         }}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Repair markra command" }));
+    fireEvent.click(screen.getByRole("button", { name: "Repair marktion command" }));
     expect(onInstallShellCommand).toHaveBeenCalledTimes(2);
 
     rerender(
@@ -255,8 +255,8 @@ describe("GeneralSettings", () => {
       />
     );
     expect(screen.getByText(/Installed at \/mock-bin\/markra/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Uninstall markra command" }));
-    fireEvent.click(screen.getByRole("button", { name: "Refresh markra command status" }));
+    fireEvent.click(screen.getByRole("button", { name: "Uninstall marktion command" }));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh marktion command status" }));
 
     expect(onUninstallShellCommand).toHaveBeenCalledTimes(1);
     expect(onRefreshShellCommand).toHaveBeenCalledTimes(1);
