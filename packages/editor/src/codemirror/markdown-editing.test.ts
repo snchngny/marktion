@@ -1,4 +1,5 @@
-import { defaultKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, redo, undo } from "@codemirror/commands";
+import { syntaxTree } from "@codemirror/language";
 import {
   EditorSelection,
   EditorState,
@@ -27,6 +28,7 @@ function createView(
       doc,
       extensions: [
         EditorState.allowMultipleSelections.of(true),
+        history(),
         keymap.of(defaultKeymap),
         liveMarkdown({
           plugins: [
@@ -71,6 +73,14 @@ function expectFullHeightEmptyLines(view: EditorView, count: number) {
       !line.hasAttribute("data-markra-empty-source")
     ),
   ).toBe(true);
+}
+
+function topLevelNodeNames(view: EditorView) {
+  const names: string[] = [];
+  for (let node = syntaxTree(view.state).topNode.firstChild; node; node = node.nextSibling) {
+    names.push(node.name);
+  }
+  return names;
 }
 
 afterEach(() => {
@@ -476,11 +486,233 @@ describe("markdownEditingPlugin", () => {
     expect(view.state.doc.toString()).toBe("- First\n- ");
   });
 
-  it("inserts two spaces at the cursor for plain-text Tab", () => {
+  it("converts a plain paragraph into a root list item on Tab", () => {
     const view = createView("Alphabeta", "Alpha".length);
 
     expect(press(view, "Tab")).toBe(true);
-    expect(view.state.doc.toString()).toBe("Alpha  beta");
+    expect(view.state.doc.toString()).toBe("- Alphabeta");
+  });
+
+  it("turns the preceding plain paragraph into a parent list item", () => {
+    const view = createView("Parent\n\nChild", "Parent\n\nChild".length);
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- Parent\n\n  - Child");
+  });
+
+  it("converts a paragraph with multiple source lines into one child item", () => {
+    const doc = "Parent\n\nChild line one\nChild line two";
+    const view = createView(doc, doc.indexOf("Child line two") + 3);
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n\n  - Child line one\n    Child line two",
+    );
+  });
+
+  it("nests a paragraph after a list under its last top-level item", () => {
+    const doc = "- Parent\n  - Existing child\n\nNew paragraph";
+    const view = createView(doc, doc.indexOf("New paragraph") + 4);
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n  - Existing child\n\n  - New paragraph",
+    );
+  });
+
+  it("nests ordered items by the parent marker's content column", () => {
+    const doc = "1. Root\n   9. Parent\n   10. Child\n   11. Sibling\n2. Next";
+    const view = createView(doc, doc.indexOf("10. Child") + 5);
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "1. Root\n   9. Parent\n      10. Child\n   11. Sibling\n2. Next",
+    );
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      doc,
+    );
+  });
+
+  it("moves a deeply nested item one level per Tab and Shift+Tab", () => {
+    const doc = "- Root\n  - Parent\n    - Child\n  - Sibling";
+    const view = createView(doc, doc.indexOf("Child"));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Root\n  - Parent\n  - Child\n  - Sibling",
+    );
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Root\n  - Parent\n    - Child\n  - Sibling",
+    );
+  });
+
+  it("leaves the first root item unchanged when Tab has no previous sibling", () => {
+    const doc = "- First\n- Second";
+    const view = createView(doc, doc.indexOf("First"));
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("keeps selected sibling items at the same new depth", () => {
+    const doc = "- Parent\n- First\n- Second\n- Next";
+    const from = doc.indexOf("- First");
+    const to = doc.indexOf("- Second") + "- Second".length;
+    const view = createView(doc, EditorSelection.create([EditorSelection.range(from, to)]));
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n  - First\n  - Second\n- Next",
+    );
+  });
+
+  it("does not turn the next line into a selected list item when the range ends there", () => {
+    const doc = "- Parent\n- Selected\n- Next";
+    const from = doc.indexOf("- Selected");
+    const to = doc.indexOf("- Next");
+    const view = createView(doc, EditorSelection.create([EditorSelection.range(from, to)]));
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n  - Selected\n- Next",
+    );
+  });
+
+  it("outdents selected siblings together without changing their parent order", () => {
+    const doc = "- Parent\n  - First\n  - Second\n  - Later\n- Next";
+    const from = doc.indexOf("- First");
+    const to = doc.indexOf("- Second") + "- Second".length;
+    const view = createView(doc, EditorSelection.create([EditorSelection.range(from, to)]));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n  - Later\n- First\n- Second\n- Next",
+    );
+  });
+
+  it("keeps Tab as indentation in frontmatter, quotes, and tables", () => {
+    const frontmatter = "---\ntitle: Example\n---\n\nBody";
+    const frontmatterView = createView(frontmatter, frontmatter.indexOf("Example") + 2);
+    expect(press(frontmatterView, "Tab")).toBe(true);
+    expect(frontmatterView.state.doc.toString()).toContain("Ex  ample");
+
+    const quote = "> Quoted";
+    const quoteView = createView(quote, quote.indexOf("Quoted") + 2);
+    expect(press(quoteView, "Tab")).toBe(true);
+    expect(quoteView.state.doc.toString()).toBe("> Qu  oted");
+
+    const table = "| A | B |\n| --- | --- |\n| x | y |";
+    const tableView = createView(table, table.indexOf("x") + 1);
+    expect(press(tableView, "Tab")).toBe(true);
+    expect(tableView.state.doc.toString()).toContain("x   | y");
+  });
+
+  it("moves an outdented subtree after the parent's other children", () => {
+    const doc = "- Parent\n  - Child\n  - Sibling\n- Next";
+    const view = createView(doc, doc.indexOf("Child"));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n  - Sibling\n- Child\n- Next",
+    );
+  });
+
+  it("removes a root list marker and promotes its child list", () => {
+    const doc = "- Parent\n  - Child\n    - Grandchild";
+    const view = createView(doc, doc.indexOf("Parent"));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "Parent\n\n- Child\n  - Grandchild",
+    );
+    expect(topLevelNodeNames(view)).toEqual(["Paragraph", "BulletList"]);
+  });
+
+  it("separates an unlisted root item from its preceding list", () => {
+    const doc = "- First\n- Second";
+    const view = createView(doc, doc.indexOf("Second"));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("- First\n\nSecond");
+    expect(topLevelNodeNames(view)).toEqual(["BulletList", "Paragraph"]);
+  });
+
+  it("separates a promoted ordered child list from its plain parent paragraph", () => {
+    const doc = "- Parent\n  2. Child";
+    const view = createView(doc, doc.indexOf("Parent"));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("Parent\n\n2. Child");
+    expect(topLevelNodeNames(view)).toEqual(["Paragraph", "OrderedList"]);
+  });
+
+  it("keeps selected root items as separate Markdown paragraphs", () => {
+    const doc = "- First\n- Second\n- Third";
+    const from = doc.indexOf("- First");
+    const to = doc.indexOf("- Second") + "- Second".length;
+    const view = createView(doc, EditorSelection.create([EditorSelection.range(from, to)]));
+
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("First\n\nSecond\n- Third");
+    expect(topLevelNodeNames(view)).toEqual(["Paragraph", "Paragraph", "BulletList"]);
+  });
+
+  it("keeps Tab inside fenced code as plain indentation", () => {
+    const doc = "```\ncode\n```";
+    const view = createView(doc, doc.indexOf("code") + 2);
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe("```\nco  de\n```");
+  });
+
+  it("applies one paragraph conversion for duplicate cursors", () => {
+    const view = createView(
+      "Paragraph",
+      EditorSelection.create([
+        EditorSelection.cursor(2),
+        EditorSelection.cursor(6),
+      ]),
+    );
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- Paragraph");
+  });
+
+  it("undoes and redoes a hierarchy edit as one operation", () => {
+    const view = createView("Parent\n\nChild", "Parent\n\nChild".length);
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- Parent\n\n  - Child");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("Parent\n\nChild");
+    expect(redo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("- Parent\n\n  - Child");
+  });
+
+  it("keeps consecutive hierarchy edits as separate undo steps", () => {
+    const doc = "- Parent\n- Child\n- Sibling";
+    const view = createView(doc, doc.indexOf("Child"));
+
+    expect(press(view, "Tab")).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n  - Child\n- Sibling",
+    );
+    expect(press(view, "Tab", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n  - Child\n- Sibling",
+    );
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+    expect(redo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Parent\n  - Child\n- Sibling",
+    );
+    expect(redo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
   });
 
   it("indents and outdents the current Markdown list item", () => {

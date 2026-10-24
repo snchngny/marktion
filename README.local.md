@@ -1,5 +1,21 @@
 # ローカル変更メモ
 
+## TabによるMarkdown階層編集
+
+通常段落でTabを押すと、内容を標準Markdownのlist itemに変換します。直前が通常段落なら親itemへ変換し、現在段落をその子itemにします。直前に親候補がない場合はroot list itemを作ります。親がlist itemなら、そのmarkerの幅に合わせて子itemを作ります。複数行の段落は1 itemとして保ち、選択した連続list itemは同じ深さへ移動します。
+
+複数cursorでは同じ通常段落への重複変換を一度にまとめ、選択したlist itemはまとめて階層変更します。別々の通常段落を含む一括選択は階層変換せず、従来のTab挿入処理を使います。
+
+list item上のTabは直前の同階層itemの子へ移動します。Shift+Tabは1段上へ戻し、親の後ろに未選択の兄弟itemがある場合は、その兄弟の親を維持するため対象itemと子孫を親の残りの子孫の後ろへ移動します。root itemでShift+Tabを押すとmarkerを外し、子listは1段上へ移します。Markdownの段落とlistが続いて誤結合しないよう、必要な箇所には空行を入れます。最初のroot itemのTabは何も変更しません。
+
+fenced/indented code、frontmatter、table、blockquoteでは通常の2 spacesを挿入します。read-only中またはIME変換中は階層変換しません。文書にはlist markerとindentだけを保存し、独自HTMLの階層記法は加えません。各操作は一つのUndoで戻せます。
+
+この挙動はCodeMirrorの汎用indent commandを使いません。CodeMirrorの`indentMore`は選択行をindentし、Markdown専用コマンドはblock marker直後のBackspace処理を提供します。LogseqのMarkdown Mirrorは`-` itemとindentで親子を保存する設計です。Markraでは既存Lezer treeとBlockRange処理を使い、Markdown sourceを直接更新します。
+
+- [CodeMirror commands](https://github.com/codemirror/commands)
+- [CodeMirror Markdown language](https://github.com/codemirror/lang-markdown)
+- [Logseq Markdown syntax](https://github.com/logseq/logseq/blob/master/docs/logseq-markdown-syntax.md)
+
 ## Callout解析の共有
 
 `packages/editor/src/codemirror/callout-preview.ts`では、同じCodeMirror文書に対するCalloutの行走査結果を`WeakMap<Text, ...>`で共有します。spacing用StateFieldと表示用ViewPluginが別々に呼ばれても、同じ不変`Text`の間は1回だけ解析します。文書が変わると新しい`Text`をキーに解析し直します。選択・focus・viewport更新は文書を変えないため、再解析しません。
