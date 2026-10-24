@@ -3,6 +3,7 @@ import {
   type EditorState as CodeMirrorState,
   type Range,
   type Text,
+  type Transaction,
 } from "@codemirror/state";
 import {
   Decoration,
@@ -94,6 +95,47 @@ function readCodeMirrorCallouts(state: CodeMirrorState) {
 
   calloutsByDocument.set(state.doc, callouts);
   return callouts;
+}
+
+function mapCalloutsAcrossPlainTextChange(transaction: Transaction) {
+  if (!transaction.docChanged) return false;
+
+  let changesStayOutsideBlockquotes = true;
+  transaction.changes.iterChangedRanges((fromA, toA, fromB, toB) => {
+    const removed = transaction.startState.sliceDoc(fromA, toA);
+    const inserted = transaction.state.sliceDoc(fromB, toB);
+    if (/[\r\n]/u.test(removed + inserted)) {
+      changesStayOutsideBlockquotes = false;
+      return;
+    }
+
+    const oldLine = transaction.startState.doc.lineAt(fromA);
+    const newLine = transaction.state.doc.lineAt(fromB);
+    if (
+      blockquoteContent(oldLine.text) ||
+      blockquoteContent(newLine.text)
+    ) {
+      changesStayOutsideBlockquotes = false;
+    }
+  });
+  if (!changesStayOutsideBlockquotes) return false;
+
+  const callouts = calloutsByDocument.get(transaction.startState.doc);
+  if (!callouts) return false;
+
+  const { changes } = transaction;
+  calloutsByDocument.set(
+    transaction.state.doc,
+    callouts.map((callout) => ({
+      ...callout,
+      from: changes.mapPos(callout.from, -1),
+      lineFroms: callout.lineFroms.map((position) => changes.mapPos(position, -1)),
+      markerFrom: changes.mapPos(callout.markerFrom, 1),
+      markerTo: changes.mapPos(callout.markerTo, -1),
+      to: changes.mapPos(callout.to, 1),
+    })),
+  );
+  return true;
 }
 
 function selectionTouchesCallout(
@@ -253,9 +295,10 @@ const calloutSpacingField = StateField.define<DecorationSet>({
   create: buildCalloutSpacingDecorations,
   provide: (field) => EditorView.decorations.from(field),
   update(spacing, transaction) {
-    return transaction.docChanged
-      ? buildCalloutSpacingDecorations(transaction.state)
-      : spacing;
+    if (!transaction.docChanged) return spacing;
+    return mapCalloutsAcrossPlainTextChange(transaction)
+      ? spacing.map(transaction.changes)
+      : buildCalloutSpacingDecorations(transaction.state);
   },
 });
 

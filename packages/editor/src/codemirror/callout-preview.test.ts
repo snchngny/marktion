@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe("calloutPreviewPlugin", () => {
-  it("parses callouts once per document and reuses them for selection updates", () => {
+  it("reuses callouts for selection and ordinary text updates", () => {
     const parseMarker = vi.spyOn(shared, "parseMarkdownCalloutMarker");
     const doc = "> [!NOTE]\n> Detail\n\nEdit";
     const view = createView(doc);
@@ -53,8 +53,47 @@ describe("calloutPreviewPlugin", () => {
       selection: { anchor: view.state.doc.length + 1 },
       userEvent: "input",
     });
-    expect(parseMarker).toHaveBeenCalledTimes(2);
+    expect(parseMarker).toHaveBeenCalledTimes(1);
     parseMarker.mockRestore();
+  });
+
+  it("maps callouts across multi-range Unicode edits outside blockquotes", () => {
+    const parseMarker = vi.spyOn(shared, "parseMarkdownCalloutMarker");
+    const doc = "Before\n\n> [!NOTE]\n> Detail\n\nAfter";
+    const view = createView(doc);
+    parseMarker.mockClear();
+
+    const before = doc.indexOf("Before") + 3;
+    const after = doc.indexOf("After") + 3;
+    const inserted = "日本🙂";
+    const insertedLength = inserted.length;
+    view.dispatch({
+      changes: [
+        { from: before, insert: inserted },
+        { from: after, insert: inserted },
+      ],
+      userEvent: "input",
+    });
+
+    expect(view.dom.querySelectorAll(".cm-markra-callout")).toHaveLength(2);
+    expect(view.dom.querySelector(".markra-callout-header")?.textContent).toContain("Note");
+    expect(parseMarker).not.toHaveBeenCalled();
+
+    view.dispatch({
+      changes: [
+        { from: before, to: before + insertedLength, insert: "" },
+        {
+          from: after + insertedLength,
+          to: after + insertedLength * 2,
+          insert: "",
+        },
+      ],
+      userEvent: "delete",
+    });
+
+    expect(view.state.doc.toString()).toBe(doc);
+    expect(view.dom.querySelectorAll(".cm-markra-callout")).toHaveLength(2);
+    expect(parseMarker).not.toHaveBeenCalled();
   });
 
   it("caches documents with no callouts", () => {
@@ -64,7 +103,54 @@ describe("calloutPreviewPlugin", () => {
 
     expect(parseMarker).toHaveBeenCalledTimes(1);
     view.dispatch({ selection: EditorSelection.cursor(doc.indexOf("Edit")) });
+    view.dispatch({
+      changes: { from: doc.indexOf("Edit"), insert: "!" },
+      userEvent: "input",
+    });
     expect(parseMarker).toHaveBeenCalledTimes(1);
+  });
+
+  it("rescans when a blockquote continuation changes", () => {
+    const parseMarker = vi.spyOn(shared, "parseMarkdownCalloutMarker");
+    const doc = "> [!NOTE]\n> Detail\n\nEdit";
+    const view = createView(doc);
+    parseMarker.mockClear();
+
+    view.dispatch({
+      changes: { from: doc.indexOf("Detail") + 2, insert: "!" },
+      userEvent: "input",
+    });
+
+    expect(parseMarker).toHaveBeenCalledTimes(1);
+    expect(view.dom.querySelectorAll(".cm-markra-callout")).toHaveLength(2);
+  });
+
+  it("rescans when a plain line becomes a callout or gains a line break", () => {
+    const parseMarker = vi.spyOn(shared, "parseMarkdownCalloutMarker");
+    const doc = "[!TIP]\n\nEdit";
+    const view = createView(doc);
+    parseMarker.mockClear();
+
+    view.dispatch({
+      changes: { from: 0, insert: "> " },
+      userEvent: "input",
+    });
+    expect(parseMarker).toHaveBeenCalledTimes(1);
+    expect(view.dom.querySelector(".cm-markra-callout")?.getAttribute("data-callout-type"))
+      .toBe("tip");
+
+    const edit = view.state.doc.toString().indexOf("Edit");
+    view.dispatch({
+      changes: { from: edit, insert: "\n" },
+      userEvent: "input",
+    });
+    expect(parseMarker).toHaveBeenCalledTimes(2);
+
+    view.dispatch({
+      changes: { from: 0, to: 2, insert: "" },
+      userEvent: "delete",
+    });
+    expect(view.dom.querySelector(".cm-markra-callout")).toBeNull();
   });
 
   it("renders a GitHub alert as a callout without changing Markdown", () => {
