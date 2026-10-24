@@ -1,12 +1,15 @@
-import { syntaxTree } from "@codemirror/language";
+import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
+import { history, isolateHistory } from "@codemirror/commands";
+import { hasProtectedMarkdownInRange } from "./markdown-editing.ts";
 import {
+  Annotation,
   EditorSelection,
   EditorState,
   Prec,
   StateEffect,
   StateField,
+  Transaction,
   type Extension,
-  type Transaction,
 } from "@codemirror/state";
 import { keymap, type EditorView } from "@codemirror/view";
 import {
@@ -15,7 +18,7 @@ import {
   type MarkraUiAction,
 } from "./plugin.ts";
 
-export type MarkraSlashMenuSource = "typed" | "virtual";
+export type MarkraSlashMenuSource = "block-selection" | "typed" | "virtual";
 
 export interface MarkraSlashMenuState {
   readonly actions: readonly MarkraUiAction[];
@@ -28,6 +31,7 @@ export interface MarkraSlashMenuState {
 }
 
 interface SlashMenuRange {
+  deleteFrom: number;
   from: number;
   query: string;
   source: MarkraSlashMenuSource;
@@ -47,7 +51,7 @@ interface InternalSlashMenuState {
 
 type SlashMenuEffect =
   | { type: "close" }
-  | { type: "open" }
+  | { source: "block-selection" | "virtual"; type: "open" }
   | { index: number; type: "select" };
 
 interface SyntaxNodeLike {
@@ -56,18 +60,66 @@ interface SyntaxNodeLike {
 }
 
 const updateSlashMenu = StateEffect.define<SlashMenuEffect>();
+const setSlashHistoryPending = StateEffect.define<boolean>();
+const slashHistoryPart = Annotation.define<boolean>();
+const slashHistoryUserEvent = "input.type.markra-slash";
+
+const slashHistoryField = StateField.define<boolean>({
+  create: () => false,
+  update(pending, transaction) {
+    const pendingEffect = transaction.effects.find((effect) =>
+      effect.is(setSlashHistoryPending)
+    );
+    if (pendingEffect) return pendingEffect.value;
+    return transaction.docChanged ? false : pending;
+  },
+});
+
+const slashHistoryExtension: Extension = [
+  slashHistoryField,
+  EditorState.transactionExtender.of((transaction) => {
+    if (
+      !transaction.docChanged ||
+      !transaction.startState.field(slashHistoryField, false)
+    ) return null;
+    return {
+      annotations: slashHistoryPart.of(true),
+    };
+  }),
+  history({
+    joinToEvent: (transaction, adjacent) => {
+      return transaction.annotation(slashHistoryPart) === true;
+    },
+  }),
+];
 
 function isEditable(state: EditorState) {
   return !state.facet(EditorState.readOnly);
 }
 
-function isInsideCodeBlock(state: EditorState, position: number) {
-  let node: SyntaxNodeLike | null = syntaxTree(state).resolve(position, -1);
+const protectedBlockNames = new Set([
+  "FencedCode", "CodeBlock", "Frontmatter", "Table", "TableCell",
+  "TableHeader", "HTMLBlock", "BlockMath", "MathBlock", "Mermaid",
+]);
+
+function hasProtectedBlock(state: EditorState, from: number, to: number) {
+  return hasProtectedMarkdownInRange(state, from, to);
+}
+
+function isParagraphPosition(state: EditorState, position: number) {
+  const tree = ensureSyntaxTree(state, position, 100) ?? syntaxTree(state);
+  let node: SyntaxNodeLike | null = tree.resolve(position, -1);
+  let paragraph = false;
   while (node) {
-    if (node.name === "FencedCode" || node.name === "CodeBlock") return true;
+    if (
+      protectedBlockNames.has(node.name) || node.name === "Blockquote" ||
+      node.name === "ListItem" || node.name.startsWith("ATXHeading") ||
+      node.name.startsWith("SetextHeading")
+    ) return false;
+    if (node.name === "Paragraph") paragraph = true;
     node = node.parent;
   }
-  return false;
+  return paragraph;
 }
 
 function typedRangeFromState(state: EditorState): SlashMenuRange | null {
@@ -77,16 +129,29 @@ function typedRangeFromState(state: EditorState): SlashMenuRange | null {
 
   const line = state.doc.lineAt(selection.head);
   if (selection.head !== line.to) return null;
-  if (isInsideCodeBlock(state, selection.head)) return null;
+  if (hasProtectedMarkdownInRange(state, selection.head, selection.head)) return null;
 
   const beforeCursor = state.sliceDoc(line.from, selection.head);
-  const match = /^([\t ]*)[/、]([^\s/、]*)$/u.exec(beforeCursor);
+  const startMatch = /^([\t ]*)([/、])([^\s/、]*)$/u.exec(beforeCursor);
+  const tailMatch = /^([\t ]*)(.+?)([\t ]+)([/、])([^\s/、]*)$/u.exec(beforeCursor);
+  const match = startMatch ?? tailMatch;
   if (!match) return null;
+  const body = startMatch ? "" : (tailMatch?.[2] ?? "");
+  const delimiter = startMatch ? "" : (tailMatch?.[3] ?? "");
+  if (!startMatch && !body.trim()) return null;
 
   const indentLength = match[1]?.length ?? 0;
+  const from = startMatch
+    ? line.from + indentLength
+    : line.from + indentLength + body.length + delimiter.length;
+  if (
+    !isParagraphPosition(state, selection.head) ||
+    hasProtectedBlock(state, selection.head, selection.head)
+  ) return null;
   return {
-    from: line.from + indentLength,
-    query: match[2] ?? "",
+    deleteFrom: from - delimiter.length,
+    from,
+    query: startMatch ? (startMatch[3] ?? "") : (tailMatch?.[5] ?? ""),
     source: "typed",
     to: selection.head,
   };
@@ -102,16 +167,34 @@ function virtualRangeFromState(
 
   const line = state.doc.lineAt(selection.head);
   if (selection.head !== line.to || from < line.from) return null;
-  if (isInsideCodeBlock(state, selection.head)) return null;
+  if (hasProtectedMarkdownInRange(state, selection.head, selection.head)) return null;
 
   const query = state.sliceDoc(from, selection.head);
   if (/\s|[/、]/u.test(query)) return null;
 
   return {
+    deleteFrom: from,
     from,
     query,
     source: "virtual",
     to: selection.head,
+  };
+}
+
+function blockSelectionRangeFromState(state: EditorState): SlashMenuRange | null {
+  if (!isEditable(state) || state.selection.ranges.length !== 1) return null;
+  const selection = state.selection.main;
+  if (
+    selection.empty || selection.from !== state.doc.lineAt(selection.from).from ||
+    selection.to !== state.doc.lineAt(selection.to).to ||
+    hasProtectedBlock(state, selection.from, selection.to)
+  ) return null;
+  return {
+    deleteFrom: selection.from,
+    from: selection.from,
+    query: "",
+    source: "block-selection",
+    to: selection.to,
   };
 }
 
@@ -164,13 +247,20 @@ const slashMenuField = StateField.define<InternalSlashMenuState>({
 
     if (effect?.type === "open") {
       return {
-        active: virtualRangeFromState(transaction.state),
+        active: effect.source === "block-selection"
+          ? blockSelectionRangeFromState(transaction.state)
+          : virtualRangeFromState(transaction.state),
         selectedIndex: 0,
         suppressed: null,
       };
     }
 
-    const active = typedRange ?? continuedVirtualRange(transaction, previous);
+    const continuedBlockSelection = previous.active?.source === "block-selection" &&
+      !transaction.docChanged && !transaction.selection
+      ? blockSelectionRangeFromState(transaction.state)
+      : null;
+    const active = typedRange ?? continuedVirtualRange(transaction, previous) ??
+      continuedBlockSelection;
     if (sameRange(active, previous.suppressed)) {
       return { active: null, selectedIndex: 0, suppressed: previous.suppressed };
     }
@@ -226,7 +316,13 @@ const slashMenuKeymap = Prec.highest(
 );
 
 export function markraSlashMenu(): Extension {
-  return [slashMenuField, slashMenuKeymap];
+  return [slashHistoryExtension, slashMenuField, slashMenuKeymap];
+}
+
+export function slashCommandUserEvent(state: EditorState) {
+  return state.field(slashHistoryField, false)
+    ? slashHistoryUserEvent
+    : "input";
 }
 
 export function getMarkraSlashMenuState(
@@ -268,9 +364,17 @@ export function getMarkraSlashMenuState(
   };
 }
 
-export function openMarkraSlashMenu(view: EditorView) {
-  if (!virtualRangeFromState(view.state)) return false;
-  view.dispatch({ effects: updateSlashMenu.of({ type: "open" }) });
+export function openMarkraSlashMenu(
+  view: EditorView,
+  options: { source?: "block-selection" } = {},
+) {
+  if (view.composing || !isEditable(view.state)) return false;
+  const source = options.source ?? "virtual";
+  const range = source === "block-selection"
+    ? blockSelectionRangeFromState(view.state)
+    : virtualRangeFromState(view.state);
+  if (!range) return false;
+  view.dispatch({ effects: updateSlashMenu.of({ source, type: "open" }) });
   // Toolbar buttons take DOM focus before their click handler runs. Restore it
   // so CodeMirror receives the menu's Arrow/Enter/Escape keybindings.
   view.focus();
@@ -292,21 +396,43 @@ export function runMarkraSlashMenuAction(
   const action = commandId
     ? menu.actions.find((candidate) => candidate.command === commandId)
     : menu.actions[menu.selectedIndex];
-  if (!action?.enabled || menu.from === null || menu.to === null) return false;
+  if (
+    !action?.enabled || menu.from === null || menu.to === null ||
+    view.composing || !isEditable(view.state)
+  ) return false;
   const query = menu.query;
 
-  // Delete the typed or virtual query first so block commands operate on the
-  // clean Markdown line, matching Markra's existing slash-command semantics.
-  view.dispatch({
-    changes: { from: menu.from, to: menu.to },
-    effects: updateSlashMenu.of({ type: "close" }),
-    selection: EditorSelection.cursor(menu.from),
-    userEvent: "input.delete",
-  });
+  if (menu.source === "block-selection") {
+    if (!blockSelectionRangeFromState(view.state)) return false;
+    // Keep the block range intact while the chosen block command runs.
+    view.dispatch({ effects: updateSlashMenu.of({ type: "close" }) });
+  } else {
+    const active = internalState(view)?.active;
+    if (!active) return false;
+    view.dispatch({
+      changes: { from: active.deleteFrom, to: menu.to },
+      effects: [
+        updateSlashMenu.of({ type: "close" }),
+        setSlashHistoryPending.of(true),
+      ],
+      annotations: [
+        Transaction.userEvent.of(slashHistoryUserEvent),
+        isolateHistory.of("before"),
+      ],
+    });
+  }
+  const beforeTransform = view.state.doc;
   const handled = runMarkraCommand(view, action.command, {
     query,
     source: "slash-menu",
   });
+  if (menu.source !== "block-selection") {
+    const transformed = view.state.doc !== beforeTransform;
+    view.dispatch({
+      effects: transformed ? [] : [setSlashHistoryPending.of(false)],
+      annotations: isolateHistory.of("after"),
+    });
+  }
   if (handled) view.focus();
   return handled;
 }

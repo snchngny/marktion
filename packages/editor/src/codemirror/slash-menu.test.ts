@@ -1,3 +1,4 @@
+import { undo } from "@codemirror/commands";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView, runScopeHandlers } from "@codemirror/view";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +11,7 @@ import {
   runMarkraSlashMenuAction,
   searchMarkraUi,
   tablePreviewPlugin,
+  blockSelectionPlugin,
 } from "./index.ts";
 
 import "./dom.test-support.ts";
@@ -37,6 +39,14 @@ function editorKey(view: EditorView, key: string) {
   return runScopeHandlers(
     view,
     new KeyboardEvent("keydown", { bubbles: true, key }),
+    "editor",
+  );
+}
+
+function modifiedEditorKey(view: EditorView, key: string) {
+  return runScopeHandlers(
+    view,
+    new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ctrlKey: true, key }),
     "editor",
   );
 }
@@ -101,6 +111,62 @@ describe("Markra slash menu", () => {
     });
     expect(editorKey(view, "Enter")).toBe(true);
     expect(view.state.doc.toString()).toBe("## ");
+  });
+
+  it("opens at a paragraph end after text, preserves the body, and rejects URL/path slashes", () => {
+    const view = createView("Existing text /h1");
+    expect(getMarkraSlashMenuState(view)).toMatchObject({
+      open: true,
+      query: "h1",
+      source: "typed",
+    });
+    expect(editorKey(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("# Existing text");
+
+    for (const value of ["https://example.test/path", "C:/notes/file.md", "foo/bar"]) {
+      expect(getMarkraSlashMenuState(createView(value)).open).toBe(false);
+    }
+  });
+
+  it.each([
+    ["```ts\ntext /h1\n```", "text /h1"],
+    ["---\ntitle: text /h1\n---", "title: text /h1"],
+    ["$$\ntext /h1\n$$", "text /h1"],
+    ["| a | text /h1 |\n| --- | --- |\n| b | c |", "text /h1"],
+    ["<div>text /h1</div>", "text /h1"],
+  ])("does not activate inside protected Markdown blocks: %s", (doc, target) => {
+    const view = createView(doc);
+    view.dispatch({ selection: EditorSelection.cursor(doc.indexOf(target) + target.length) });
+    expect(getMarkraSlashMenuState(view).open).toBe(false);
+  });
+
+  it("undoes typed query removal and block formatting together, then isolates later typing", () => {
+    const view = createView("Existing text /h1");
+    expect(editorKey(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("# Existing text");
+
+    view.dispatch({
+      changes: { from: view.state.doc.length, insert: "!" },
+      userEvent: "input.type",
+    });
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("# Existing text");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("Existing text /h1");
+  });
+
+  it.each([
+    ["quote", "block.quote"],
+    ["code", "block.code"],
+    ["table", "block.table"],
+  ])("groups /%s insertion with query removal in one undo", (query, command) => {
+    const original = `Existing text /${query}`;
+    const view = createView(original);
+
+    expect(runMarkraSlashMenuAction(view, command)).toBe(true);
+    expect(view.state.doc.toString()).not.toBe(original);
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(original);
   });
 
   it("does not open from source text inside a fenced code block", () => {

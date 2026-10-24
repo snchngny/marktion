@@ -1,4 +1,8 @@
 import {
+  ensureSyntaxTree,
+  syntaxTree,
+} from "@codemirror/language";
+import {
   EditorSelection,
   EditorState,
   type ChangeSpec,
@@ -7,12 +11,17 @@ import {
 import type { EditorView } from "@codemirror/view";
 import { insertCodeMirrorMarkdownTable } from "./controller.ts";
 import {
+  hasProtectedMarkdownInRange,
+  unwrapRootListSelection,
+} from "./markdown-editing.ts";
+import {
   defineMarkraPlugin,
   type MarkraCommand,
   type MarkraCommandContext,
   type MarkraUiContribution,
 } from "./plugin.ts";
 import { headingLevelControlExtension } from "./heading-level.ts";
+import { slashCommandUserEvent } from "./slash-menu.ts";
 
 export type BlockCommandId =
   | "block.paragraph"
@@ -225,6 +234,20 @@ function selectedLines(state: EditorState): SelectedLine[] {
     .map((number) => state.doc.line(number));
 }
 
+function selectedContentLines(state: EditorState) {
+  return selectedLines(state).filter((line) => line.text.trim().length > 0);
+}
+
+function blockCommandLines(view: EditorView) {
+  const state = view.state;
+  const lines = selectedContentLines(state);
+  if (lines.length > 0 || state.selection.ranges.length !== 1 || !state.selection.main.empty) {
+    return lines;
+  }
+  const line = state.doc.lineAt(state.selection.main.head);
+  return line.text.trim().length === 0 ? [line] : lines;
+}
+
 function dispatchLineChanges(view: EditorView, changes: readonly ChangeSpec[]) {
   if (changes.length === 0) return false;
 
@@ -243,7 +266,7 @@ function dispatchLineChanges(view: EditorView, changes: readonly ChangeSpec[]) {
   view.dispatch({
     changes: changeSet,
     selection,
-    userEvent: "input",
+    userEvent: slashCommandUserEvent(state),
   });
   return true;
 }
@@ -261,13 +284,14 @@ function markerChange(
 }
 
 function everyLineMatches(view: EditorView, pattern: RegExp) {
-  const lines = selectedLines(view.state);
+  const lines = blockCommandLines(view);
   return lines.length > 0 && lines.every((line) => pattern.test(line.text));
 }
 
 function setHeading(view: EditorView, level: 1 | 2 | 3 | 4 | 5 | 6) {
   if (!isEditable(view)) return false;
-  const lines = selectedLines(view.state);
+  const lines = blockCommandLines(view);
+  if (lines.length === 0) return false;
   const exactPattern = new RegExp(`^[\\t ]{0,3}#{${level}}[\\t ]+`);
   const removeHeading = lines.every((line) => exactPattern.test(line.text));
   const changes = lines.map((line) => {
@@ -282,11 +306,60 @@ function setHeading(view: EditorView, level: 1 | 2 | 3 | 4 | 5 | 6) {
   return dispatchLineChanges(view, changes);
 }
 
+function selectionContainsProtectedParagraph(view: EditorView) {
+  const range = view.state.selection.main;
+  return hasProtectedMarkdownInRange(view.state, range.from, range.to);
+}
+
+function completeBlockquoteSelection(view: EditorView) {
+  const state = view.state;
+  if (state.selection.ranges.length !== 1) return false;
+  const range = state.selection.main;
+  if (
+    range.empty || range.from !== state.doc.lineAt(range.from).from ||
+    range.to !== state.doc.lineAt(range.to).to
+  ) return false;
+  const tree = ensureSyntaxTree(state, range.to, 100) ?? syntaxTree(state);
+  let exactBlock = false;
+  tree.iterate({
+    enter(node) {
+      if (node.name !== "Blockquote") return;
+      const from = state.doc.lineAt(node.from).from;
+      const to = state.doc.lineAt(Math.max(node.from, node.to - 1)).to;
+      if (from === range.from && to === range.to) exactBlock = true;
+    },
+  });
+  return exactBlock;
+}
+
 function setParagraph(view: EditorView) {
   if (!isEditable(view)) return false;
+  const rootList = unwrapRootListSelection(view);
+  if (rootList !== null) return rootList;
+
+  const lines = selectedLines(view.state);
+  const contentLines = lines.filter((line) => line.text.trim().length > 0);
+  const quoteMatches = contentLines.map((line) => quotePattern.exec(line.text));
+  if (quoteMatches.some(Boolean)) {
+    if (
+      view.composing || view.state.selection.ranges.length !== 1 ||
+      contentLines.length === 0 || !completeBlockquoteSelection(view) ||
+      selectionContainsProtectedParagraph(view)
+    ) return false;
+    const changes = contentLines.flatMap((line, index) => {
+      const match = quoteMatches[index];
+      if (!match) return [];
+      return {
+        from: line.from + (match[1]?.length ?? 0),
+        to: line.from + match[0].length,
+      };
+    });
+    return dispatchLineChanges(view, changes);
+  }
+
   const changes: ChangeSpec[] = [];
 
-  for (const line of selectedLines(view.state)) {
+  for (const line of contentLines) {
     const match = headingPattern.exec(line.text);
     if (!match) continue;
     changes.push({
@@ -301,7 +374,8 @@ function setParagraph(view: EditorView) {
 
 function toggleQuote(view: EditorView) {
   if (!isEditable(view)) return false;
-  const lines = selectedLines(view.state);
+  const lines = blockCommandLines(view);
+  if (lines.length === 0) return false;
   const remove = lines.every((line) => quotePattern.test(line.text));
   const changes = lines.flatMap((line) => {
     const match = quotePattern.exec(line.text);
@@ -321,7 +395,8 @@ function toggleQuote(view: EditorView) {
 
 function toggleList(view: EditorView, ordered: boolean) {
   if (!isEditable(view)) return false;
-  const lines = selectedLines(view.state);
+  const lines = blockCommandLines(view);
+  if (lines.length === 0) return false;
   const targetPattern = ordered ? orderedPattern : bulletPattern;
   const remove = lines.every((line) => targetPattern.test(line.text));
   const changes = lines.map((line, index) => {
@@ -333,7 +408,8 @@ function toggleList(view: EditorView, ordered: boolean) {
 
 function toggleTaskList(view: EditorView) {
   if (!isEditable(view)) return false;
-  const lines = selectedLines(view.state);
+  const lines = blockCommandLines(view);
+  if (lines.length === 0) return false;
   const remove = lines.every((line) => taskPattern.test(line.text));
   const changes = lines.map((line) =>
     markerChange(
@@ -403,7 +479,11 @@ function toggleCodeBlock(view: EditorView) {
   const to = changeSet.mapPos(bounds.range.to, active ? 1 : -1);
   const selection = mappedSelectionRange(bounds.range, from, to);
 
-  view.dispatch({ changes: changeSet, selection, userEvent: "input" });
+  view.dispatch({
+    changes: changeSet,
+    selection,
+    userEvent: slashCommandUserEvent(view.state),
+  });
   return true;
 }
 
@@ -435,7 +515,7 @@ function insertCalloutBlock(
     changes: { from, insert: markdown, to },
     scrollIntoView: true,
     selection: EditorSelection.cursor(from + markdown.length),
-    userEvent: "input",
+    userEvent: slashCommandUserEvent(view.state),
   });
   view.focus();
   return true;

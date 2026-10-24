@@ -7,6 +7,7 @@ import {
   type SelectionRange,
 } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
+import { slashCommandUserEvent } from "./slash-menu.ts";
 import type {
   AiDocumentAnchor,
   AiHeadingAnchor,
@@ -644,6 +645,7 @@ export function insertCodeMirrorMarkdownTable(view: EditorView) {
   view.dispatch({
     changes: { from, insert: defaultMarkdownTable, to },
     scrollIntoView: true,
+    userEvent: slashCommandUserEvent(view.state),
     // A source cursor inside the table reveals the complete Markdown node.
     // Keep it at the boundary while the visual cell owns the editing focus.
     selection: EditorSelection.cursor(

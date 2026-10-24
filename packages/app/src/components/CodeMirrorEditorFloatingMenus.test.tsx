@@ -1,7 +1,8 @@
 import { EditorSelection, EditorState } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView, runScopeHandlers } from "@codemirror/view";
 import {
   blocksPlugin,
+  blockSelectionPlugin,
   documentLinksPlugin,
   getMarkraSlashMenuState,
   liveMarkdown,
@@ -100,6 +101,61 @@ describe("CodeMirrorEditorFloatingMenus", () => {
     expect(host.container.querySelector(".markra-slash-menu")).not.toBeNull();
     act(() => heading2?.click());
     expect(view.state.doc.toString()).toBe("## ");
+  });
+
+  it("opens the slash menu from a preserved block selection", async () => {
+    const parent = document.createElement("div");
+    document.body.append(parent);
+    const view = new EditorView({
+      parent,
+      state: EditorState.create({
+        doc: "Text",
+        extensions: [
+          liveMarkdown({ plugins: [blocksPlugin(), blockSelectionPlugin()], slashMenu: true }),
+          markraEditorReactBridge,
+        ],
+        selection: EditorSelection.cursor(2),
+      }),
+    });
+    vi.spyOn(view, "coordsAtPos").mockReturnValue({
+      bottom: 40,
+      left: 24,
+      right: 24,
+      top: 20,
+    });
+    views.push(view);
+    const host = render(
+      <MarkraEditorProvider view={view}>
+        <CodeMirrorEditorFloatingMenus />
+      </MarkraEditorProvider>,
+    );
+
+    await flushMeasurement();
+    const press = (key: string, ctrlKey = false) => runScopeHandlers(
+      view,
+      new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ctrlKey, key }),
+      "editor",
+    );
+    act(() => { press("Escape"); });
+    const selected = view.state.selection.main;
+    expect(selected.empty).toBe(false);
+    act(() => { press("/", true); });
+    await flushMeasurement();
+
+    expect(getMarkraSlashMenuState(view)).toMatchObject({
+      open: true,
+      source: "block-selection",
+    });
+    expect(view.state.selection.main).toEqual(selected);
+    expect(host.container.querySelector(".markra-slash-menu")).not.toBeNull();
+    const headingIndex = getMarkraSlashMenuState(view).actions.findIndex(
+      (action) => action.command === "block.heading.2",
+    );
+    for (let index = 0; index < headingIndex; index += 1) {
+      act(() => { press("ArrowDown"); });
+    }
+    act(() => { press("Enter"); });
+    expect(view.state.doc.toString()).toBe("## Text");
   });
 
   it("keeps the slash command list compact and scrollable", async () => {

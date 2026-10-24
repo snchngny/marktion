@@ -13,6 +13,7 @@ import {
 import { EditorView, keymap, type ViewUpdate } from "@codemirror/view";
 import { findCodeMirrorMathRanges } from "./math-preview.ts";
 import { isInsidePreformattedBlock } from "./blank-lines.ts";
+import { readCodeMirrorFrontmatter } from "./frontmatter-preview.ts";
 import { defineMarkraPlugin } from "./plugin.ts";
 
 const indentation = "  ";
@@ -23,6 +24,52 @@ const mathRangesByDocument = new WeakMap<
   EditorState["doc"],
   ReturnType<typeof findCodeMirrorMathRanges>
 >();
+const frontmatterRangesByDocument = new WeakMap<
+  EditorState["doc"],
+  ReturnType<typeof readCodeMirrorFrontmatter>
+>();
+
+const protectedMarkdownNodeNames = new Set([
+  "FencedCode", "CodeBlock", "Table", "TableCell", "TableHeader",
+  "HTMLBlock", "BlockMath", "MathBlock", "Mermaid", "Frontmatter",
+]);
+
+export function hasProtectedMarkdownInRange(
+  state: EditorState,
+  from: number,
+  to: number,
+) {
+  let frontmatter = frontmatterRangesByDocument.get(state.doc);
+  if (frontmatter === undefined) {
+    frontmatter = readCodeMirrorFrontmatter(state.doc.toString());
+    frontmatterRangesByDocument.set(state.doc, frontmatter);
+  }
+  if (frontmatter && frontmatter.from <= to && from <= frontmatter.to) return true;
+
+  let mathRanges = mathRangesByDocument.get(state.doc);
+  if (!mathRanges) {
+    mathRanges = findCodeMirrorMathRanges(state);
+    mathRangesByDocument.set(state.doc, mathRanges);
+  }
+  if (mathRanges.some((range) => range.from <= to && from <= range.to)) return true;
+
+  let protectedBlock = false;
+  (ensureSyntaxTree(state, to, 100) ?? syntaxTree(state)).iterate({
+    enter(node) {
+      if (
+        protectedMarkdownNodeNames.has(node.name) &&
+        node.from <= to && from <= node.to
+      ) {
+        protectedBlock = true;
+        return false;
+      }
+    },
+    from,
+    to,
+  });
+  return protectedBlock || isInsidePreformattedBlock(state, from) ||
+    isInsidePreformattedBlock(state, to);
+}
 
 function isEditable(view: EditorView) {
   return !view.state.facet(EditorState.readOnly);
@@ -363,6 +410,59 @@ function rootOutdentChanges(view: EditorView, item: MarkdownBlockNode) {
     }
   }
   return changes;
+}
+
+const protectedListDescendants = new Set([
+  "FencedCode", "CodeBlock", "Table", "TableCell", "TableHeader",
+  "HTMLBlock", "BlockMath", "MathBlock", "Mermaid", "Frontmatter",
+]);
+
+function hasProtectedListDescendant(view: EditorView, item: MarkdownBlockNode) {
+  let protectedNode = false;
+  const visit = (node: MarkdownBlockNode) => {
+    if (protectedListDescendants.has(node.name)) {
+      protectedNode = true;
+      return;
+    }
+    for (let child = node.firstChild; child; child = child.nextSibling) visit(child);
+  };
+  for (let child = item.firstChild; child; child = child.nextSibling) visit(child);
+  const linesContainProtectedContent = nodeLines(view, item).some((line) =>
+    hasProtectedMarkdownInRange(view.state, line.from, line.to)
+  );
+  return protectedNode || linesContainProtectedContent;
+}
+
+/**
+ * Remove only complete root list items, using the same source-aware handling
+ * as Shift+Tab. Returns null when the selection is not a list, false when a
+ * list selection cannot be safely unwrapped, and true after a successful edit.
+ */
+export function unwrapRootListSelection(view: EditorView): boolean | null {
+  if (!isEditable(view) || view.composing) return false;
+  const items = selectedListItems(view);
+  if (items.length === 0) return null;
+  if (view.state.selection.ranges.length !== 1) return false;
+
+  const range = view.state.selection.main;
+  const first = items[0]!;
+  const last = items.at(-1)!;
+  const firstLine = view.state.doc.lineAt(first.from);
+  const lastLine = view.state.doc.lineAt(Math.max(last.from, last.to - 1));
+  if (
+    range.empty || range.from !== firstLine.from || range.to !== lastLine.to ||
+    items.some((item) => ancestor(item.parent, ["ListItem"]) || hasProtectedListDescendant(view, item))
+  ) return false;
+
+  for (const line of selectedLines(view.state)) {
+    const belongsToSelectedItem = items.some((item) =>
+      item.from <= line.from && item.to >= line.to
+    );
+    if (!belongsToSelectedItem) return false;
+  }
+
+  const changes = items.flatMap((item) => rootOutdentChanges(view, item));
+  return dispatchWithSelection(view, changes);
 }
 
 function indentNodeChanges(view: EditorView, node: MarkdownBlockNode, delta: number) {

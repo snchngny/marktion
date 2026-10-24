@@ -135,6 +135,54 @@ describe("blocksPlugin", () => {
     expect(view.state.selection.main.head).toBe(2);
   });
 
+  it("converts a complete root list to a paragraph while preserving child list structure", () => {
+    const view = createView({ doc: "- Parent\n  - Child" });
+
+    expect(runMarkraCommand(view, "block.paragraph")).toBe(true);
+    expect(view.state.doc.toString()).toBe("Parent\n\n- Child");
+  });
+
+  it("leaves nested-only and code-containing list selections unchanged", () => {
+    const nestedDoc = "- Parent\n  - Child";
+    const nested = createView({
+      doc: nestedDoc,
+      from: nestedDoc.indexOf("  - Child"),
+      to: nestedDoc.length,
+    });
+    expect(runMarkraCommand(nested, "block.paragraph")).toBe(false);
+    expect(nested.state.doc.toString()).toBe(nestedDoc);
+
+    const codeDoc = "- Parent\n\n  ```ts\n  const value = 1\n  ```";
+    const code = createView({ doc: codeDoc });
+    expect(runMarkraCommand(code, "block.paragraph")).toBe(false);
+    expect(code.state.doc.toString()).toBe(codeDoc);
+  });
+
+  it("unwraps a complete quote by one level and rejects partial or protected quote ranges", () => {
+    const quote = createView({ doc: "> One\n> > Nested" });
+    expect(runMarkraCommand(quote, "block.paragraph")).toBe(true);
+    expect(quote.state.doc.toString()).toBe("One\n> Nested");
+
+    const partial = createView({ doc: "> One\n> Two", from: 0, to: 5 });
+    expect(runMarkraCommand(partial, "block.paragraph")).toBe(false);
+    expect(partial.state.doc.toString()).toBe("> One\n> Two");
+
+    const codeDoc = "> Text\n>\n> ```ts\n> const value = 1\n> ```";
+    const code = createView({ doc: codeDoc });
+    expect(runMarkraCommand(code, "block.paragraph")).toBe(false);
+    expect(code.state.doc.toString()).toBe(codeDoc);
+  });
+
+  it("keeps blank paragraph separators out of heading and list conversions", () => {
+    const heading = createView({ doc: "First\n\nSecond" });
+    expect(runMarkraCommand(heading, "block.heading.1")).toBe(true);
+    expect(heading.state.doc.toString()).toBe("# First\n\n# Second");
+
+    const list = createView({ doc: "First\n\nSecond" });
+    expect(runMarkraCommand(list, "block.bullet-list")).toBe(true);
+    expect(list.state.doc.toString()).toBe("- First\n\n- Second");
+  });
+
   it("shows a quiet heading-level control for the active rendered heading", () => {
     const view = createView({ doc: "## Synthetic heading", from: 8, to: 8 });
     view.focus();

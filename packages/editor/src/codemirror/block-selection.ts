@@ -7,7 +7,7 @@ import { moveCodeMirrorBlock, readCodeMirrorBlockRanges } from "./block-drag.ts"
 import type { CodeMirrorBlockRange } from "./block-drag.ts";
 import { isInsidePreformattedBlock } from "./blank-lines.ts";
 import { defineMarkraPlugin, runMarkraCommand } from "./plugin.ts";
-import { getMarkraSlashMenuState } from "./slash-menu.ts";
+import { getMarkraSlashMenuState, openMarkraSlashMenu } from "./slash-menu.ts";
 
 type SelectionMode = "block" | "document" | "none";
 
@@ -303,12 +303,22 @@ function toggleTaskList(view: EditorView) {
   return true;
 }
 
+function openSlashMenuForSelection(view: EditorView) {
+  if (
+    !editable(view) || view.state.field(blockSelectionField, false) !== "block"
+  ) return false;
+  const selected = blocksWithinSelection(view);
+  if (!selected.length || selected.some(protectedBlock)) return false;
+  return openMarkraSlashMenu(view, { source: "block-selection" });
+}
+
 export function blockSelectionPlugin() {
   return defineMarkraPlugin({
     id: "markra.block-selection",
     extension: [
       blockSelectionField,
       Prec.highest(keymap.of([
+      { key: "Mod-/", run: openSlashMenuForSelection },
       { key: "Escape", run: escapeBlockSelection },
       { key: "Enter", run: enterBlockSelection },
       { key: "Mod-a", run: selectAll },

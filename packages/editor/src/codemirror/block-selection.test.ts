@@ -4,7 +4,11 @@ import { EditorView, runScopeHandlers } from "@codemirror/view";
 import { afterEach, describe, expect, it } from "vitest";
 import { blocksPlugin } from "./blocks.ts";
 import { blockSelectionPlugin } from "./block-selection.ts";
-import { liveMarkdown, markdownEditingPlugin } from "./index.ts";
+import {
+  getMarkraSlashMenuState,
+  liveMarkdown,
+  markdownEditingPlugin,
+} from "./index.ts";
 import "./dom.test-support.ts";
 
 const views: EditorView[] = [];
@@ -225,5 +229,40 @@ describe("blockSelectionPlugin", () => {
     expect(view.state.doc.toString()).toBe("- [ ] Task");
     expect(undo(view)).toBe(true);
     expect(view.state.doc.toString()).toBe("Task");
+  });
+
+  it("opens the slash menu with Ctrl+/ and keeps the block selection through conversion", () => {
+    const view = createView("Alpha");
+    expect(press(view, "Escape")).toBe(true);
+    const selected = view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to);
+    expect(selected).toBe("Alpha");
+
+    expect(press(view, "/", { ctrl: true })).toBe(true);
+    expect(getMarkraSlashMenuState(view)).toMatchObject({
+      open: true,
+      query: "",
+      source: "block-selection",
+    });
+    expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe(selected);
+
+    const actions = getMarkraSlashMenuState(view).actions;
+    const headingIndex = actions.findIndex((action) => action.command === "block.heading.1");
+    for (let index = 0; index < headingIndex; index += 1) press(view, "ArrowDown");
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("# Alpha");
+    expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe("Alpha");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("Alpha");
+  });
+
+  it("does not open a formatting menu for a quote containing fenced code", () => {
+    const doc = "> Text\n>\n> ```ts\n> const value = 1\n> ```";
+    const view = createView(doc);
+    view.dispatch({ selection: EditorSelection.cursor(doc.indexOf("Text") + 1) });
+
+    expect(press(view, "Escape")).toBe(true);
+    expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe(doc);
+    expect(press(view, "/", { ctrl: true })).toBe(false);
+    expect(getMarkraSlashMenuState(view).open).toBe(false);
   });
 });
