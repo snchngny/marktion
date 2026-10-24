@@ -5,7 +5,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   codeMirrorBlockDragPlugin,
   moveCodeMirrorBlock,
+  moveCodeMirrorBlocks,
   readCodeMirrorBlockRanges,
+  resolveCodeMirrorBlockSelection,
 } from "./block-drag.ts";
 import { horizontalRulePlugin } from "./horizontal-rule.ts";
 import { getMarkraSlashMenuState, liveMarkdown } from "./index.ts";
@@ -46,6 +48,313 @@ afterEach(() => {
 });
 
 describe("codeMirrorBlockDragPlugin", () => {
+  it("resolves a partial multi-block text selection to whole blocks in either direction", () => {
+    const doc = "First paragraph\ncontinued\n\nSecond\n\nThird";
+    const view = createView(doc);
+    const start = doc.indexOf("paragraph") + 2;
+    const end = doc.indexOf("Second") + 3;
+    view.dispatch({ selection: EditorSelection.range(start, end) });
+
+    expect(resolveCodeMirrorBlockSelection(view.state)?.map((block) =>
+      view.state.sliceDoc(block.from, block.to))).toEqual([
+      "First paragraph\ncontinued",
+      "Second",
+    ]);
+    view.dispatch({ selection: EditorSelection.range(end, start) });
+    expect(resolveCodeMirrorBlockSelection(view.state)?.map((block) =>
+      view.state.sliceDoc(block.from, block.to))).toEqual([
+      "First paragraph\ncontinued",
+      "Second",
+    ]);
+  });
+
+  it("keeps selection ends exclusive, rejects whitespace-only ranges, and prefers nested children", () => {
+    const view = createView("- Parent\n  - Child\n\nTail");
+    const parent = readCodeMirrorBlockRanges(view.state).find((block) =>
+      view.state.sliceDoc(block.from, block.to).startsWith("- Parent")
+    );
+    const child = readCodeMirrorBlockRanges(view.state).find((block) =>
+      view.state.sliceDoc(block.from, block.to).includes("Child")
+    );
+    expect(parent && child).toBeTruthy();
+    view.dispatch({ selection: EditorSelection.range(parent!.from, parent!.to) });
+    expect(resolveCodeMirrorBlockSelection(view.state)?.map((block) => block.from)).toEqual([parent!.from]);
+    view.dispatch({ selection: EditorSelection.range(child!.from + 4, child!.to - 1) });
+    expect(resolveCodeMirrorBlockSelection(view.state)?.map((block) => block.from)).toEqual([child!.from]);
+
+    const exclusive = createView("First\n\nSecond");
+    exclusive.dispatch({ selection: EditorSelection.range(0, 7) });
+    expect(resolveCodeMirrorBlockSelection(exclusive.state)?.map((block) =>
+      exclusive.state.sliceDoc(block.from, block.to))).toEqual(["First"]);
+
+    const blankDoc = "First\n \t\nSecond";
+    const blank = createView(blankDoc);
+    blank.dispatch({ selection: EditorSelection.range(6, 8) });
+    expect(resolveCodeMirrorBlockSelection(blank.state)).toEqual([]);
+  });
+
+  it("does not create movable empty-line ranges inside fenced code", () => {
+    const view = createView("```txt\nFirst\n\nSecond\n```\n\nTail");
+    expect(readCodeMirrorBlockRanges(view.state).filter((block) => block.name === "EmptyLine")).toEqual([]);
+  });
+
+  it("cancels a pointer drop released outside the editor and its handle gutter", () => {
+    const doc = "First\n\nSecond\n\nThird";
+    const view = createView(doc);
+    Object.defineProperty(view.dom, "getBoundingClientRect", {
+      value: () => new DOMRect(80, 50, 300, 200),
+    });
+    const handle = view.dom.querySelector<HTMLElement>(".markra-block-drag-handle")!;
+    handle.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true, cancelable: true, button: 0, pointerId: 12, clientX: 55, clientY: 70,
+    }));
+    document.dispatchEvent(new PointerEvent("pointermove", {
+      bubbles: true, cancelable: true, pointerId: 12, clientX: 410, clientY: 130,
+    }));
+    expect(view.dom.querySelector(".markra-block-drop-indicator")?.getAttribute("data-show")).toBe("false");
+    document.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true, cancelable: true, pointerId: 12, clientX: 410, clientY: 130,
+    }));
+    expect(view.state.doc.toString()).toBe(doc);
+    expect(view.dom.querySelector(".markra-block-drop-indicator")).toBeNull();
+  });
+
+  it("expands either selected edge to the entire parent list item", () => {
+    const doc = "- Parent\n  - Child\n  - Sibling\n\nTail";
+    const view = createView(doc);
+    const parent = readCodeMirrorBlockRanges(view.state).find((block) => block.depth === 0)!;
+    view.dispatch({ selection: EditorSelection.range(3, doc.indexOf("Child") + 2) });
+    expect(resolveCodeMirrorBlockSelection(view.state)?.map((block) => block.from)).toEqual([parent.from]);
+    view.dispatch({ selection: EditorSelection.range(doc.indexOf("Child") + 2, 3) });
+    expect(resolveCodeMirrorBlockSelection(view.state)?.map((block) => block.from)).toEqual([parent.from]);
+  });
+
+  it("moves a multi-block paragraph group as one edit and preserves extra blank lines", () => {
+    const doc = "First\n\nSecond\n\nThird\n\n\n\nFourth";
+    const view = createView(doc);
+    const blocks = readCodeMirrorBlockRanges(view.state);
+    const first = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "First");
+    const second = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "Second");
+    const third = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "Third");
+
+    expect(first && second && third && moveCodeMirrorBlocks(
+      view,
+      [first.from, second.from],
+      third.from,
+      "after",
+    )).toBe(true);
+    expect(view.state.doc.toString()).toBe("Third\n\nFirst\n\nSecond\n\n\n\nFourth");
+    expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe("First\n\nSecond");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("moves a raw group containing different top-level block types", () => {
+    const view = createView("# Heading\n\nParagraph\n\nTail");
+    const blocks = readCodeMirrorBlockRanges(view.state);
+    const heading = blocks.find((block) => block.name === "ATXHeading1");
+    const paragraph = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "Paragraph");
+    const tail = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "Tail");
+
+    expect(heading && paragraph && tail && moveCodeMirrorBlocks(
+      view,
+      [heading.from, paragraph.from],
+      tail.from,
+      "after",
+    )).toBe(true);
+    expect(view.state.doc.toString()).toBe("Tail\n\n# Heading\n\nParagraph");
+  });
+
+  it("keeps a following paragraph separate when moving the last nested list child", () => {
+    const view = createView("- Parent\n  - First\n  - Last\n\nAfter");
+    const blocks = readCodeMirrorBlockRanges(view.state);
+    const last = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "  - Last");
+    const after = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "After");
+
+    expect(last && after && moveCodeMirrorBlock(view, last.from, after.from, "before")).toBe(true);
+    expect(readCodeMirrorBlockRanges(view.state).some((block) =>
+      block.name === "Paragraph" && view.state.sliceDoc(block.from, block.to) === "After"
+    )).toBe(true);
+  });
+
+  it.each(["- Parent\n  - Child", "- Parent\n- Child"])("keeps the vacated list boundary when moving a last item beyond another paragraph: %s", (list) => {
+    const doc = `${list}\n\nAfter\n\nLast`;
+    const view = createView(doc);
+    const blocks = readCodeMirrorBlockRanges(view.state);
+    const child = blocks.find((block) => view.state.sliceDoc(block.from, block.to).trim() === "- Child");
+    const last = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "Last");
+    expect(child && last && moveCodeMirrorBlock(view, child.from, last.from, "after")).toBe(true);
+    expect(readCodeMirrorBlockRanges(view.state).filter((block) => block.name === "Paragraph").map((block) =>
+      view.state.sliceDoc(block.from, block.to))).toEqual(["After", "Last"]);
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("keeps typing before and after a drag move in separate undo events", () => {
+    const doc = "First\n\nSecond\n\nThird";
+    const view = createView(doc);
+    view.dispatch({ changes: { from: 5, insert: "!" }, userEvent: "input.type" });
+    const blocks = readCodeMirrorBlockRanges(view.state);
+    expect(moveCodeMirrorBlock(view, blocks[0]!.from, blocks[2]!.from, "after")).toBe(true);
+    const moved = view.state.doc.toString();
+    view.dispatch({ changes: { from: view.state.selection.main.head, insert: "?" }, userEvent: "input.type" });
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(moved);
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("First!\n\nSecond\n\nThird");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("keeps a selected list group with its nested children when reordering", () => {
+    const view = createView("- First\n  - Child A\n- Second\n- Third\n  - Child B");
+    const blocks = readCodeMirrorBlockRanges(view.state);
+    const first = blocks.find((block) => view.state.sliceDoc(block.from, block.to).startsWith("- First"));
+    const second = blocks.find((block) => view.state.sliceDoc(block.from, block.to) === "- Second");
+    const third = blocks.find((block) => view.state.sliceDoc(block.from, block.to).startsWith("- Third"));
+
+    expect(first && second && third && moveCodeMirrorBlocks(
+      view,
+      [first.from, second.from],
+      third.from,
+      "after",
+      0,
+    )).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "- Third\n  - Child B\n- First\n  - Child A\n- Second",
+    );
+  });
+
+  it("uses the target row midpoint even when the pointer is over its toolbar", () => {
+    for (const testCase of [
+      { y: 100, side: "before", indicator: "100px" },
+      { y: 109, side: "before", indicator: "100px" },
+      { y: 110, side: "after", indicator: "120px" },
+      { y: 111, side: "after", indicator: "120px" },
+      { y: 120, side: "after", indicator: "120px" },
+    ] as const) {
+      const view = createView("First\n\nSecond\n\nThird\n\nFourth");
+      const blocks = readCodeMirrorBlockRanges(view.state);
+      const first = blocks[0];
+      const third = blocks[2];
+      const handle = view.dom.querySelector<HTMLElement>(
+        `[data-block-from="${first?.from}"] .markra-block-drag-handle`,
+      );
+      const target = view.dom.querySelector<HTMLElement>(
+        `.cm-line[data-markra-block-from="${third?.from}"]`,
+      );
+      const toolbar = target?.querySelector<HTMLElement>(".markra-block-toolbar");
+      const rowRect = { top: 100, bottom: 120, height: 20, left: 0, right: 200, width: 200, x: 0, y: 100, toJSON: () => ({}) };
+      const toolbarRect = { ...rowRect, top: 100, bottom: 102, height: 2 };
+      if (target) Object.defineProperty(target, "getBoundingClientRect", { value: () => rowRect });
+      if (toolbar) Object.defineProperty(toolbar, "getBoundingClientRect", { value: () => toolbarRect });
+      const values = new Map<string, string>();
+      const dataTransfer = {
+        dropEffect: "none",
+        effectAllowed: "none",
+        getData: (type: string) => values.get(type) ?? "",
+        setData: (type: string, value: string) => values.set(type, value),
+      };
+      const dragStart = new MouseEvent("dragstart", { bubbles: true, cancelable: true });
+      Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
+      const dragOver = new MouseEvent("dragover", { bubbles: true, cancelable: true, clientY: testCase.y });
+      Object.defineProperty(dragOver, "dataTransfer", { value: dataTransfer });
+      const drop = new MouseEvent("drop", { bubbles: true, cancelable: true, clientY: testCase.y });
+      Object.defineProperty(drop, "dataTransfer", { value: dataTransfer });
+
+      handle?.dispatchEvent(dragStart);
+      toolbar?.dispatchEvent(dragOver);
+      expect(view.dom.querySelector<HTMLElement>(".markra-block-drop-indicator")?.style.top).toBe(testCase.indicator);
+      toolbar?.dispatchEvent(drop);
+      expect(view.state.doc.toString()).toBe(testCase.side === "before"
+        ? "Second\n\nFirst\n\nThird\n\nFourth"
+        : "Second\n\nThird\n\nFirst\n\nFourth");
+    }
+  });
+
+  it("drags every block in a selected group from any selected handle", () => {
+    const doc = "First\n\nSecond\n\nThird\n\nFourth";
+    const view = createView(doc);
+    const blocks = readCodeMirrorBlockRanges(view.state);
+    const second = blocks[1];
+    const fourth = blocks[3];
+    view.dispatch({ selection: EditorSelection.range(0, second?.to ?? 0) });
+    const handle = view.dom.querySelector<HTMLElement>(
+      `[data-block-from="${second?.from}"] .markra-block-drag-handle`,
+    );
+    const target = view.dom.querySelector<HTMLElement>(
+      `.cm-line[data-markra-block-from="${fourth?.from}"]`,
+    );
+    if (target) Object.defineProperty(target, "getBoundingClientRect", {
+      value: () => ({ top: 100, bottom: 120, height: 20, left: 0, right: 200, width: 200, x: 0, y: 100, toJSON: () => ({}) }),
+    });
+    const values = new Map<string, string>();
+    const dataTransfer = {
+      dropEffect: "none",
+      effectAllowed: "none",
+      getData: (type: string) => values.get(type) ?? "",
+      setData: (type: string, value: string) => values.set(type, value),
+    };
+    const dragStart = new MouseEvent("dragstart", { bubbles: true, cancelable: true });
+    Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
+    const dragOver = new MouseEvent("dragover", { bubbles: true, cancelable: true, clientY: 105 });
+    Object.defineProperty(dragOver, "dataTransfer", { value: dataTransfer });
+    const drop = new MouseEvent("drop", { bubbles: true, cancelable: true, clientY: 105 });
+    Object.defineProperty(drop, "dataTransfer", { value: dataTransfer });
+
+    handle?.dispatchEvent(dragStart);
+    target?.dispatchEvent(dragOver);
+    target?.dispatchEvent(drop);
+
+    expect(view.state.doc.toString()).toBe("Third\n\nFirst\n\nSecond\n\nFourth");
+    expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe("First\n\nSecond");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("rejects an empty external drag payload instead of treating it as block zero", () => {
+    const view = createView("First\n\nSecond");
+    const target = view.dom.querySelector<HTMLElement>('.cm-line[data-markra-block-from="7"]');
+    const dataTransfer = { dropEffect: "none", getData: () => "", setData: () => undefined };
+    const dragOver = new MouseEvent("dragover", { bubbles: true, cancelable: true });
+    Object.defineProperty(dragOver, "dataTransfer", { value: dataTransfer });
+    target?.dispatchEvent(dragOver);
+    expect(dragOver.defaultPrevented).toBe(false);
+    expect(view.state.doc.toString()).toBe("First\n\nSecond");
+  });
+
+  it("cancels pointer drags on pointercancel or a document change", () => {
+    for (const mode of ["cancel", "edit"] as const) {
+      const view = createView("First\n\nSecond\n\nThird");
+      const blocks = readCodeMirrorBlockRanges(view.state);
+      const first = blocks[0];
+      const handle = view.dom.querySelector<HTMLElement>(
+        `[data-block-from="${first?.from}"] .markra-block-drag-handle`,
+      );
+      handle?.dispatchEvent(new PointerEvent("pointerdown", {
+        bubbles: true, button: 0, buttons: 1, clientX: 10, clientY: 10, pointerId: 8,
+      }));
+      view.dom.dispatchEvent(new PointerEvent("pointermove", {
+        bubbles: true, buttons: 1, clientX: 20, clientY: 40, pointerId: 8,
+      }));
+      expect(view.dom.querySelector(".markra-block-drop-indicator")).not.toBeNull();
+
+      if (mode === "cancel") {
+        document.dispatchEvent(new PointerEvent("pointercancel", {
+          bubbles: true, pointerId: 8,
+        }));
+        expect(view.state.doc.toString()).toBe("First\n\nSecond\n\nThird");
+      } else {
+        view.dispatch({ changes: { from: 5, insert: "!" }, userEvent: "input" });
+        document.dispatchEvent(new PointerEvent("pointerup", {
+          bubbles: true, button: 0, clientX: 20, clientY: 40, pointerId: 8,
+        }));
+        expect(view.state.doc.toString()).toBe("First!\n\nSecond\n\nThird");
+      }
+      expect(view.dom.querySelector(".markra-block-drop-indicator")).toBeNull();
+    }
+  });
+
   it("discovers list items as independently draggable blocks without rewriting source", () => {
     const doc = "# Title\n\nParagraph\n\n- One\n- Two\n\n> Quote";
     const view = createView(doc);
@@ -306,6 +615,9 @@ describe("codeMirrorBlockDragPlugin", () => {
     const target = view.dom.querySelector<HTMLElement>(
       `.cm-line[data-markra-block-from="${second?.from}"]`,
     );
+    if (target) Object.defineProperty(target, "getBoundingClientRect", {
+      value: () => ({ top: 0, bottom: 20, height: 20, left: 0, right: 200, width: 200, x: 0, y: 0, toJSON: () => ({}) }),
+    });
     const values = new Map<string, string>();
     const dataTransfer = {
       dropEffect: "none",
@@ -315,9 +627,9 @@ describe("codeMirrorBlockDragPlugin", () => {
     };
     const dragStart = new MouseEvent("dragstart", { bubbles: true, cancelable: true });
     Object.defineProperty(dragStart, "dataTransfer", { value: dataTransfer });
-    const dragOver = new MouseEvent("dragover", { bubbles: true, cancelable: true });
+    const dragOver = new MouseEvent("dragover", { bubbles: true, cancelable: true, clientY: 15 });
     Object.defineProperty(dragOver, "dataTransfer", { value: dataTransfer });
-    const drop = new MouseEvent("drop", { bubbles: true, cancelable: true });
+    const drop = new MouseEvent("drop", { bubbles: true, cancelable: true, clientY: 15 });
     Object.defineProperty(drop, "dataTransfer", { value: dataTransfer });
 
     handle?.dispatchEvent(dragStart);

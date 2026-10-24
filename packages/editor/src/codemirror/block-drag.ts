@@ -1,4 +1,6 @@
 import { syntaxTree } from "@codemirror/language";
+import { isolateHistory } from "@codemirror/commands";
+import type { SyntaxNode } from "@lezer/common";
 import {
   EditorSelection,
   EditorState,
@@ -115,12 +117,69 @@ export function readCodeMirrorBlockRanges(
     }
     for (let index = runStart + 1; index < runEnd; index += 1) {
       const line = state.doc.line(index + 1);
-      ranges.push({ from: line.from, name: "EmptyLine", to: line.to });
+      const belongsToBlock = ranges.some((block) =>
+        block.name !== "EmptyLine" && line.from >= block.from && line.to <= block.to
+      );
+      if (!belongsToBlock) ranges.push({ from: line.from, name: "EmptyLine", to: line.to });
     }
     runStart = runEnd + 1;
   }
 
   return ranges.sort((left, right) => left.from - right.from || left.to - right.to);
+}
+
+function atomicCodeMirrorBlocks(state: CodeMirrorState) {
+  return readCodeMirrorBlockRanges(state).filter((block) =>
+    block.name !== "EmptyLine" && block.name !== "BulletList" &&
+    block.name !== "OrderedList"
+  );
+}
+
+function shortestBlockAt(
+  blocks: readonly CodeMirrorBlockRange[],
+  position: number,
+) {
+  return blocks
+    .filter((block) => block.from <= position && position <= block.to)
+    .sort((left, right) =>
+      (left.to - left.from) - (right.to - right.from) || right.from - left.from
+    )[0] ?? null;
+}
+
+export function resolveCodeMirrorBlockSelection(
+  state: CodeMirrorState,
+): CodeMirrorBlockRange[] | null {
+  if (state.selection.ranges.length !== 1) return null;
+  const selection = state.selection.main;
+  if (selection.empty) return null;
+  if (/^[\t \n]+$/u.test(state.sliceDoc(selection.from, selection.to))) return [];
+  const blocks = atomicCodeMirrorBlocks(state);
+  const overlapping = blocks.filter((block) =>
+    block.to > selection.from && block.from < selection.to
+  );
+  if (!overlapping.length) return [];
+  const contains = (position: number) => blocks
+    .filter((block) => block.from <= position && position < block.to)
+    .sort((left, right) =>
+      (left.to - left.from) - (right.to - right.from) || right.from - left.from
+    )[0] ?? null;
+  const selectedStart = contains(selection.from) ?? overlapping[0]!;
+  // The end is exclusive: a caret at the next block's first character does not select it.
+  const selectedEnd = contains(selection.to - 1) ?? overlapping.at(-1)!;
+
+  const from = Math.min(selectedStart.from, selectedEnd.from);
+  const to = Math.max(selectedStart.to, selectedEnd.to);
+  const selected = blocks.filter((block) => block.from >= from && block.to <= to);
+  const topLevel = selected.filter((block) => !selected.some((other) =>
+    other !== block && other.from <= block.from && other.to >= block.to &&
+    (other.from < block.from || other.to > block.to)
+  ));
+  if (overlapping.some((block) => {
+    const protectedBlock = /^Frontmatter|^(?:FencedCode|CodeBlock|Table|HTMLBlock|BlockMath|Mermaid)/u.test(block.name);
+    return protectedBlock &&
+      (selection.from > block.from || selection.to < block.to);
+  })) return null;
+  return topLevel;
 }
 
 function blockByFrom(state: CodeMirrorState, from: number) {
@@ -153,6 +212,63 @@ function minimalDocumentChange(current: string, next: string) {
     insert: next.slice(from, nextTo),
     to: currentTo,
   };
+}
+
+function blockRemovalBounds(document: string, from: number, to: number) {
+  let before = 0;
+  while (before < 2 && document[from - before - 1] === "\n") before += 1;
+  if (to < document.length) {
+    let after = 0;
+    while (after < 2 && document[to + after] === "\n") after += 1;
+    return { from, to: to + (from === 0 ? after : Math.min(before, after)) };
+  }
+  return { from: from - before, to };
+}
+
+function applyCodeMirrorBlockMove(
+  view: CodeMirrorView,
+  document: string,
+  deletionFrom: number,
+  deletionTo: number,
+  targetPosition: number,
+  sourceMarkdown: string,
+  requiredBreaks: number,
+  selectRange: boolean,
+) {
+  if (targetPosition > deletionFrom && targetPosition < deletionTo) return false;
+  const withoutSource = document.slice(0, deletionFrom) + document.slice(deletionTo);
+  const mappedTarget = targetPosition <= deletionFrom
+    ? targetPosition
+    : targetPosition - (deletionTo - deletionFrom);
+  let leftBreaks = 0;
+  for (let index = mappedTarget - 1; index >= 0 && withoutSource[index] === "\n"; index -= 1) {
+    leftBreaks += 1;
+  }
+  let rightBreaks = 0;
+  for (let index = mappedTarget; index < withoutSource.length && withoutSource[index] === "\n"; index += 1) {
+    rightBreaks += 1;
+  }
+  const prefix = mappedTarget > 0
+    ? "\n".repeat(Math.max(0, requiredBreaks - leftBreaks))
+    : "";
+  const suffix = mappedTarget < withoutSource.length
+    ? "\n".repeat(Math.max(0, requiredBreaks - rightBreaks))
+    : "";
+  const inserted = `${prefix}${sourceMarkdown}${suffix}`;
+  const nextDocument = withoutSource.slice(0, mappedTarget) + inserted + withoutSource.slice(mappedTarget);
+  if (nextDocument === document) return false;
+  const insertedFrom = mappedTarget + prefix.length;
+  view.dispatch({
+    changes: minimalDocumentChange(document, nextDocument),
+    scrollIntoView: true,
+    selection: selectRange
+      ? EditorSelection.range(insertedFrom, insertedFrom + sourceMarkdown.length)
+      : EditorSelection.cursor(insertedFrom),
+    userEvent: "move",
+    annotations: isolateHistory.of("full"),
+  });
+  view.focus();
+  return true;
 }
 
 function listMarkerMatch(state: CodeMirrorState, block: CodeMirrorBlockRange) {
@@ -245,7 +361,7 @@ export function moveCodeMirrorBlock(
   side: CodeMirrorBlockDropSide,
   targetDepth?: number,
 ) {
-  if (view.state.facet(EditorState.readOnly)) return false;
+  if (view.state.facet(EditorState.readOnly) || view.composing) return false;
   const blocks = readCodeMirrorBlockRanges(view.state);
   const source = blocks.find((block) => block.from === sourceFrom);
   const target = blocks.find((block) => block.from === targetFrom);
@@ -304,61 +420,82 @@ export function moveCodeMirrorBlock(
     }
   }
 
-  let deletionFrom = source.from;
-  let deletionTo = source.to;
-  if (deletionTo < document.length) {
-    while (document[deletionTo] === "\n") deletionTo += 1;
-  } else {
-    while (deletionFrom > 0 && document[deletionFrom - 1] === "\n") {
-      deletionFrom -= 1;
-    }
-  }
-  const targetPosition = side === "before" ? target.from : target.to;
-  if (targetPosition > deletionFrom && targetPosition < deletionTo) return false;
-
-  const withoutSource = document.slice(0, deletionFrom) + document.slice(deletionTo);
-  const mappedTarget = targetPosition <= deletionFrom
-    ? targetPosition
-    : targetPosition - (deletionTo - deletionFrom);
   const tight = (source.name === "ListItem" || movingIntoList) &&
     target.name === "ListItem";
   const requiredBreaks = tight ? 1 : 2;
-  let leftBreaks = 0;
-  for (let index = mappedTarget - 1; index >= 0 && withoutSource[index] === "\n"; index -= 1) {
-    leftBreaks += 1;
+  const { from: deletionFrom, to: deletionTo } = blockRemovalBounds(document, source.from, source.to);
+  const targetPosition = side === "before" ? target.from : target.to;
+  return applyCodeMirrorBlockMove(
+    view,
+    document,
+    deletionFrom,
+    deletionTo,
+    targetPosition,
+    sourceMarkdown,
+    requiredBreaks,
+    false,
+  );
+}
+
+function listContainerKey(state: CodeMirrorState, block: CodeMirrorBlockRange) {
+  if (block.name !== "ListItem") return null;
+  let node: SyntaxNode | null = syntaxTree(state).resolve(block.from, 1);
+  while (node && node.name !== "BulletList" && node.name !== "OrderedList") {
+    node = node.parent;
   }
-  let rightBreaks = 0;
-  for (
-    let index = mappedTarget;
-    index < withoutSource.length && withoutSource[index] === "\n";
-    index += 1
-  ) {
-    rightBreaks += 1;
+  return node ? `${node.name}:${node.from}:${node.to}` : null;
+}
+
+export function moveCodeMirrorBlocks(
+  view: CodeMirrorView,
+  sourceFroms: readonly number[],
+  targetFrom: number,
+  side: CodeMirrorBlockDropSide,
+  targetDepth?: number,
+) {
+  const uniqueFroms = [...new Set(sourceFroms)].sort((left, right) => left - right);
+  if (uniqueFroms.length <= 1) {
+    return uniqueFroms.length === 1
+      ? moveCodeMirrorBlock(view, uniqueFroms[0]!, targetFrom, side, targetDepth)
+      : false;
   }
-  const prefix = mappedTarget > 0
-    ? "\n".repeat(Math.max(0, requiredBreaks - leftBreaks))
-    : "";
-  const suffix = mappedTarget < withoutSource.length
-    ? "\n".repeat(Math.max(0, requiredBreaks - rightBreaks))
-    : "";
-  const inserted = `${prefix}${sourceMarkdown}${suffix}`;
-  const nextDocument = withoutSource.slice(0, mappedTarget) +
-    inserted +
-    withoutSource.slice(mappedTarget);
-  if (nextDocument === document) return false;
-  const insertedFrom = mappedTarget + prefix.length;
-  // A single transaction keeps whitespace normalization and the move in one
-  // undo step, including when a paragraph becomes a list item.
-  view.dispatch({
-    // Keep the unchanged prefix and suffix so CodeMirror can incrementally
-    // preserve the parsed list tree in long documents after a nested move.
-    changes: minimalDocumentChange(document, nextDocument),
-    scrollIntoView: true,
-    selection: EditorSelection.cursor(insertedFrom),
-    userEvent: "move",
-  });
-  view.focus();
-  return true;
+  if (view.state.facet(EditorState.readOnly) || view.composing) return false;
+  const blocks = atomicCodeMirrorBlocks(view.state);
+  const sources = uniqueFroms.map((from) => blocks.find((block) => block.from === from));
+  const target = blocks.find((block) => block.from === targetFrom);
+  if (!target || sources.some((block) => !block)) return false;
+  const selected = sources as CodeMirrorBlockRange[];
+  if (selected.some((block, index) => index > 0 && block.from < selected[index - 1]!.to)) return false;
+  const first = selected[0]!;
+  const last = selected.at(-1)!;
+  const sourceIsList = first.name === "ListItem";
+  if (selected.some((block) => (block.name === "ListItem") !== sourceIsList ||
+    (sourceIsList && block.depth !== first.depth))) return false;
+  if (target.from >= first.from && target.from < last.to) return false;
+  if (sourceIsList !== (target.name === "ListItem")) return false;
+  if (sourceIsList) {
+    const container = listContainerKey(view.state, first);
+    if (selected.some((block) => listContainerKey(view.state, block) !== container) ||
+      listContainerKey(view.state, target) !== container ||
+      target.depth !== first.depth ||
+      (targetDepth !== undefined && targetDepth !== first.depth)) return false;
+  }
+
+  const document = view.state.doc.toString();
+  const requiredBreaks = first.name === "ListItem" ? 1 : 2;
+  const { from: deletionFrom, to: deletionTo } = blockRemovalBounds(document, first.from, last.to);
+  const targetPosition = side === "before" ? target.from : target.to;
+  const sourceMarkdown = document.slice(first.from, last.to);
+  return applyCodeMirrorBlockMove(
+    view,
+    document,
+    deletionFrom,
+    deletionTo,
+    targetPosition,
+    sourceMarkdown,
+    requiredBreaks,
+    true,
+  );
 }
 
 export function addCodeMirrorBlockBelow(
@@ -460,7 +597,13 @@ class BlockToolbarWidget extends WidgetType {
       addCodeMirrorBlockBelow(view, this.blockFrom);
     });
     drag.addEventListener("dragstart", (event) => {
-      event.dataTransfer?.setData(blockDragMime, String(this.blockFrom));
+      const captured = captureBlockDrag(view, this.blockFrom);
+      if (!captured) {
+        event.preventDefault();
+        return;
+      }
+      activeBlockDrags.set(view, captured);
+      event.dataTransfer?.setData(blockDragMime, JSON.stringify(captured.sourceFroms));
       if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
       drag.dataset.dragging = "true";
       startBlockDragUi(view, this.blockFrom, event);
@@ -468,6 +611,7 @@ class BlockToolbarWidget extends WidgetType {
     drag.addEventListener("dragend", () => {
       delete drag.dataset.dragging;
       clearBlockDragUi(view);
+      activeBlockDrags.delete(view);
     });
     // Button drags do not reliably emit the HTML5 drag lifecycle in every
     // WebView, so pointer events provide the primary cross-platform path.
@@ -534,41 +678,98 @@ function eventElement(event: Event) {
       : null;
 }
 
-function dropTarget(event: MouseEvent, view: CodeMirrorView) {
-  const element = eventElement(event)?.closest<HTMLElement>(
-    "[data-markra-block-from], [data-block-from]",
-  );
-  const from = Number(
-    element?.dataset.markraBlockFrom ?? element?.dataset.blockFrom,
-  );
-  if (Number.isInteger(from)) {
-    const rect = element?.getBoundingClientRect();
-    const side = rect && event.clientY < rect.top + rect.height / 2
-      ? "before"
-      : "after";
-    const currentDepth = Number(element?.dataset.listDepth);
-    const pointerDepth = rect && Number.isInteger(currentDepth)
-      ? Math.max(0, Math.round((event.clientX - rect.left - 22) / 22))
-      : undefined;
-    return {
-      depth: pointerDepth,
-      element: element ?? null,
-      from,
-      side,
-    } as const;
+function lineNearPointer(view: CodeMirrorView, event: MouseEvent) {
+  const lines = Array.from(view.dom.querySelectorAll<HTMLElement>(".cm-line"));
+  let closest: HTMLElement | null = null;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  for (const line of lines) {
+    const rect = line.getBoundingClientRect();
+    if (rect.height === 0) continue;
+    const distance = event.clientY < rect.top
+      ? rect.top - event.clientY
+      : event.clientY > rect.bottom ? event.clientY - rect.bottom : 0;
+    if (distance < closestDistance) {
+      closest = line;
+      closestDistance = distance;
+    }
   }
+  return closest;
+}
+
+function lineAtBlockBoundary(
+  view: CodeMirrorView,
+  block: CodeMirrorBlockRange,
+  side: CodeMirrorBlockDropSide,
+) {
+  const position = side === "before" ? block.from : Math.max(block.from, block.to - 1);
   try {
-    const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
-    if (position === null) return null;
-    const block = readCodeMirrorBlockRanges(view.state).find(
-      (candidate) => position >= candidate.from && position <= candidate.to,
-    );
-    return block
-      ? { depth: block.depth, element: null, from: block.from, side: "after" as const }
-      : null;
+    const location = view.domAtPos(position, side === "before" ? 1 : -1);
+    const element = location.node instanceof Element
+      ? location.node
+      : location.node.parentElement;
+    return element?.closest<HTMLElement>(".cm-line") ?? null;
   } catch {
     return null;
   }
+}
+
+function dropTarget(event: MouseEvent, view: CodeMirrorView) {
+  if (view.state.facet(EditorState.readOnly) || view.composing) return null;
+  const bounds = view.dom.getBoundingClientRect();
+  // Keep the handle gutter available, but releasing over another pane cancels.
+  if (bounds.width > 0 && bounds.height > 0 && (
+    event.clientX < bounds.left - 48 || event.clientX > bounds.right ||
+    event.clientY < bounds.top || event.clientY > bounds.bottom
+  )) return null;
+  const blocks = atomicCodeMirrorBlocks(view.state);
+  const hit = eventElement(event);
+  const row = hit?.closest<HTMLElement>(".cm-line") ?? lineNearPointer(view, event);
+  const rowFrom = Number(row?.dataset.markraBlockFrom);
+  let position: number | null = null;
+  try {
+    position = view.posAtCoords({ x: event.clientX, y: event.clientY });
+  } catch {
+    position = null;
+  }
+
+  let block = Number.isInteger(rowFrom)
+    ? blocks.find((candidate) => candidate.from === rowFrom) ?? null
+    : null;
+  if (!block && position !== null) block = shortestBlockAt(blocks, position);
+  if (!block && position !== null && blocks.length) {
+    block = [...blocks].sort((left, right) => {
+      const leftDistance = position! < left.from
+        ? left.from - position!
+        : position! > left.to ? position! - left.to : 0;
+      const rightDistance = position! < right.from
+        ? right.from - position!
+        : position! > right.to ? position! - right.to : 0;
+      return leftDistance - rightDistance;
+    })[0] ?? null;
+  }
+  if (!block) return null;
+
+  const rect = row?.getBoundingClientRect();
+  const side = Number.isInteger(rowFrom) && rect
+    ? rect.height > 0 && event.clientY < rect.top + rect.height / 2 ? "before" : "after"
+    : position !== null && position < block.from
+      ? "before"
+      : position !== null && position > block.to
+        ? "after"
+        : rect
+          ? rect.height > 0 && event.clientY < rect.top + rect.height / 2 ? "before" : "after"
+          : position !== null && position < block.from + (block.to - block.from) / 2
+            ? "before"
+            : "after";
+  const currentDepth = Number(row?.dataset.listDepth);
+  const pointerDepth = rect && Number.isInteger(currentDepth)
+    ? Math.max(0, Math.round((event.clientX - rect.left - 22) / 22))
+    : block.depth;
+  const element = row ?? view.dom.querySelector<HTMLElement>(
+    `.cm-line[data-markra-block-from="${block.from}"]`,
+  );
+  const indicatorElement = lineAtBlockBoundary(view, block, side) ?? element;
+  return { depth: pointerDepth, element, from: block.from, indicatorElement, side } as const;
 }
 
 interface BlockDragUi {
@@ -578,6 +779,23 @@ interface BlockDragUi {
 }
 
 const blockDragUi = new WeakMap<CodeMirrorView, BlockDragUi>();
+
+interface ActiveBlockDrag {
+  readonly doc: CodeMirrorState["doc"];
+  readonly sourceFroms: readonly number[];
+}
+
+const activeBlockDrags = new WeakMap<CodeMirrorView, ActiveBlockDrag>();
+
+function captureBlockDrag(view: CodeMirrorView, primaryFrom: number): ActiveBlockDrag | null {
+  if (view.state.facet(EditorState.readOnly) || view.composing) return null;
+  const selected = resolveCodeMirrorBlockSelection(view.state);
+  const sourceFroms = selected?.some((block) => block.from === primaryFrom)
+    ? selected.map((block) => block.from)
+    : [primaryFrom];
+  if (!atomicCodeMirrorBlocks(view.state).some((block) => block.from === primaryFrom)) return null;
+  return { doc: view.state.doc, sourceFroms };
+}
 
 function clearBlockDragUi(view: CodeMirrorView) {
   const ui = blockDragUi.get(view);
@@ -623,12 +841,19 @@ function startBlockDragUi(
 
 function updateBlockDragUi(
   view: CodeMirrorView,
-  target: NonNullable<ReturnType<typeof dropTarget>>,
+  target: ReturnType<typeof dropTarget>,
   event: MouseEvent,
 ) {
   const ui = blockDragUi.get(view);
-  if (!ui || !target.element) return;
-  const rect = target.element.getBoundingClientRect();
+  const active = activeBlockDrags.get(view);
+  if (!ui) return;
+  if (!target || !active || active.doc !== view.state.doc ||
+    !validMoveCandidate(view, active.sourceFroms, target.from, target.side, target.depth) ||
+    !target.element || !target.indicatorElement) {
+    ui.indicator.dataset.show = "false";
+    return;
+  }
+  const rect = target.indicatorElement.getBoundingClientRect();
   ui.indicator.style.left = `${rect.left}px`;
   ui.indicator.style.top = `${target.side === "before" ? rect.top : rect.bottom}px`;
   ui.indicator.style.width = `${rect.width}px`;
@@ -643,13 +868,56 @@ function updateBlockDragUi(
   if (event.clientY > scrollRect.bottom - 48) scroll.scrollTop += 18;
 }
 
+function validMoveCandidate(
+  view: CodeMirrorView,
+  sourceFroms: readonly number[],
+  targetFrom: number,
+  side: CodeMirrorBlockDropSide,
+  targetDepth?: number,
+) {
+  if (view.state.facet(EditorState.readOnly) || view.composing) return false;
+  const blocks = atomicCodeMirrorBlocks(view.state);
+  const sources = [...new Set(sourceFroms)].sort((left, right) => left - right)
+    .map((from) => blocks.find((block) => block.from === from));
+  const target = blocks.find((block) => block.from === targetFrom);
+  if (!sources.length || !target || sources.some((block) => !block)) return false;
+  const selected = sources as CodeMirrorBlockRange[];
+  const first = selected[0]!;
+  const last = selected.at(-1)!;
+  if (selected.length === 1) {
+    if (first.from === target.from ||
+      (target.from > first.from && target.from < first.to)) return false;
+    const document = view.state.doc.toString();
+    const { from: deletionFrom, to: deletionTo } = blockRemovalBounds(document, first.from, first.to);
+    const position = side === "before" ? target.from : target.to;
+    return !(position > deletionFrom && position < deletionTo);
+  }
+  const sourceIsList = first.name === "ListItem";
+  if (selected.some((block, index) =>
+    (block.name === "ListItem") !== sourceIsList ||
+    (sourceIsList && block.depth !== first.depth) ||
+    (index > 0 && block.from < selected[index - 1]!.to)
+  )) return false;
+  if (target.from >= first.from && target.from < last.to) return false;
+  if (sourceIsList !== (target.name === "ListItem")) return false;
+  if (sourceIsList) {
+    const container = listContainerKey(view.state, first);
+    if (selected.some((block) => listContainerKey(view.state, block) !== container) ||
+      listContainerKey(view.state, target) !== container || target.depth !== first.depth ||
+      (targetDepth !== undefined && targetDepth !== first.depth)) return false;
+  }
+  return true;
+}
+
 function startPointerBlockDrag(
   view: CodeMirrorView,
   sourceFrom: number,
   handle: HTMLElement,
   event: PointerEvent,
 ) {
-  if (event.button !== 0 || view.state.facet(EditorState.readOnly)) return;
+  if (event.button !== 0 || view.state.facet(EditorState.readOnly) || view.composing) return;
+  const captured = captureBlockDrag(view, sourceFrom);
+  if (!captured) return;
   event.preventDefault();
   event.stopPropagation();
 
@@ -667,6 +935,12 @@ function startPointerBlockDrag(
   };
   const handlePointerMove = (moveEvent: PointerEvent) => {
     if (moveEvent.pointerId !== pointerId) return;
+    if (view.state.doc !== captured.doc || view.state.facet(EditorState.readOnly) || view.composing) {
+      cleanup();
+      clearBlockDragUi(view);
+      activeBlockDrags.delete(view);
+      return;
+    }
     if (!dragging) {
       const distance = Math.hypot(
         moveEvent.clientX - originX,
@@ -675,29 +949,36 @@ function startPointerBlockDrag(
       if (distance < pointerDragThreshold) return;
       dragging = true;
       handle.dataset.dragging = "true";
+      activeBlockDrags.set(view, captured);
       startBlockDragUi(view, sourceFrom, moveEvent);
     }
 
     const target = dropTarget(moveEvent, view);
-    if (target) updateBlockDragUi(view, target, moveEvent);
+    updateBlockDragUi(view, target, moveEvent);
     moveEvent.preventDefault();
   };
   const handlePointerUp = (upEvent: PointerEvent) => {
     if (upEvent.pointerId !== pointerId) return;
     cleanup();
     if (!dragging) return;
+    if (view.state.doc !== captured.doc || view.state.facet(EditorState.readOnly) || view.composing) {
+      clearBlockDragUi(view);
+      activeBlockDrags.delete(view);
+      return;
+    }
 
     const target = dropTarget(upEvent, view);
-    if (target) {
-      moveCodeMirrorBlock(
+    if (target && validMoveCandidate(view, captured.sourceFroms, target.from, target.side, target.depth)) {
+      moveCodeMirrorBlocks(
         view,
-        sourceFrom,
+        captured.sourceFroms,
         target.from,
         target.side,
         target.depth,
       );
     }
     clearBlockDragUi(view);
+    activeBlockDrags.delete(view);
     upEvent.preventDefault();
     upEvent.stopPropagation();
   };
@@ -705,6 +986,7 @@ function startPointerBlockDrag(
     if (cancelEvent.pointerId !== pointerId) return;
     cleanup();
     clearBlockDragUi(view);
+    activeBlockDrags.delete(view);
   };
 
   document.addEventListener("pointermove", handlePointerMove, true);
@@ -712,10 +994,30 @@ function startPointerBlockDrag(
   document.addEventListener("pointercancel", handlePointerCancel, true);
 }
 
-function draggedBlockFrom(event: DragEvent) {
+function draggedBlockFroms(event: DragEvent, view: CodeMirrorView) {
+  const active = activeBlockDrags.get(view);
+  if (active && (active.doc !== view.state.doc || view.state.facet(EditorState.readOnly) || view.composing)) {
+    clearBlockDragUi(view);
+    activeBlockDrags.delete(view);
+    return null;
+  }
+  if (!active) return null;
   const value = event.dataTransfer?.getData(blockDragMime) ?? "";
-  const from = Number(value);
-  return Number.isInteger(from) ? from : null;
+  if (!value) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed) || parsed.some((from) => !Number.isInteger(from))) return null;
+    const froms = parsed as number[];
+    return froms.length === active.sourceFroms.length &&
+        froms.every((from, index) => from === active.sourceFroms[index])
+      ? froms
+      : null;
+  } catch {
+    const from = Number(value);
+    return Number.isInteger(from) && active.sourceFroms.length === 1 && active.sourceFroms[0] === from
+      ? [from]
+      : null;
+  }
 }
 
 class BlockDragViewPlugin {
@@ -792,7 +1094,10 @@ export function codeMirrorBlockDragPlugin(
       EditorView.domEventHandlers({
         dragover(event, view) {
           const target = dropTarget(event, view);
-          if (draggedBlockFrom(event) === null || !target) {
+          const sourceFroms = draggedBlockFroms(event, view);
+          if (!sourceFroms || !target ||
+            !validMoveCandidate(view, sourceFroms, target.from, target.side, target.depth)) {
+            updateBlockDragUi(view, null, event);
             return false;
           }
           event.preventDefault();
@@ -801,12 +1106,13 @@ export function codeMirrorBlockDragPlugin(
           return true;
         },
         drop(event, view) {
-          const sourceFrom = draggedBlockFrom(event);
+          const sourceFroms = draggedBlockFroms(event, view);
           const target = dropTarget(event, view);
-          if (sourceFrom === null || !target) return false;
-          const handled = moveCodeMirrorBlock(
+          if (!sourceFroms || !target ||
+            !validMoveCandidate(view, sourceFroms, target.from, target.side, target.depth)) return false;
+          const handled = moveCodeMirrorBlocks(
             view,
-            sourceFrom,
+            sourceFroms,
             target.from,
             target.side,
             target.depth,

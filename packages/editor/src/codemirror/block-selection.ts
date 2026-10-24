@@ -3,7 +3,11 @@ import { syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
 import { EditorSelection, EditorState, Prec, StateEffect, StateField } from "@codemirror/state";
 import { keymap, type EditorView } from "@codemirror/view";
-import { moveCodeMirrorBlock, readCodeMirrorBlockRanges } from "./block-drag.ts";
+import {
+  moveCodeMirrorBlocks,
+  readCodeMirrorBlockRanges,
+  resolveCodeMirrorBlockSelection,
+} from "./block-drag.ts";
 import type { CodeMirrorBlockRange } from "./block-drag.ts";
 import { isInsidePreformattedBlock } from "./blank-lines.ts";
 import { defineMarkraPlugin, runMarkraCommand } from "./plugin.ts";
@@ -224,67 +228,39 @@ function duplicateSelectedBlocks(view: EditorView) {
 }
 
 function moveSelectedBlocks(view: EditorView, direction: -1 | 1) {
-  if (!editable(view) || view.state.field(blockSelectionField, false) !== "block") return false;
-  const selected = blocksWithinSelection(view);
+  if (!editable(view) || view.state.field(blockSelectionField, false) === "document") return false;
+  const selected = view.state.field(blockSelectionField, false) === "block"
+    ? blocksWithinSelection(view)
+    : resolveCodeMirrorBlockSelection(view.state) ?? [];
   if (!selected.length || selected.some(protectedBlock)) return false;
   const target = adjacentBlock(view, selected, direction);
   if (!target || protectedBlock(target)) return false;
-
-  if (selected.length === 1) {
-    const source = selected[0]!;
-    view.dispatch({ annotations: isolateHistory.of("before") });
-    const moved = moveCodeMirrorBlock(
-      view,
-      source.from,
-      target.from,
-      direction < 0 ? "before" : "after",
-      source.depth,
-    );
-    if (!moved) {
-      view.dispatch({ annotations: isolateHistory.of("after") });
-      return false;
-    }
-    view.dispatch({ annotations: isolateHistory.of("after") });
-    const current = blockAt(view, view.state.selection.main.head);
-    if (current && !protectedBlock(current)) setSelection(view, [current]);
-    return true;
-  }
-
   if (selected.some((block) => block.depth !== selected[0]?.depth)) return false;
   if (selected[0]?.name === "ListItem" &&
     selected.some((block) => !sameListSiblings(view, selected[0]!, block))) return false;
-  const state = view.state;
-  const first = selected[0]!;
-  const last = selected.at(-1)!;
-  const selectedMarkdown = state.sliceDoc(first.from, last.to);
-  const targetMarkdown = state.sliceDoc(target.from, target.to);
-  const sourceIsList = first.name === "ListItem";
-  if (sourceIsList !== (target.name === "ListItem")) return false;
-
-  let from: number;
-  let to: number;
-  let insert: string;
-  let movedFrom: number;
-  if (direction < 0) {
-    const separator = state.sliceDoc(target.to, first.from);
-    from = target.from;
-    to = last.to;
-    insert = `${selectedMarkdown}${separator}${targetMarkdown}`;
-    movedFrom = from;
-  } else {
-    const separator = state.sliceDoc(last.to, target.from);
-    from = first.from;
-    to = target.to;
-    insert = `${targetMarkdown}${separator}${selectedMarkdown}`;
-    movedFrom = from + targetMarkdown.length + separator.length;
+  view.dispatch({ annotations: isolateHistory.of("before") });
+  const moved = moveCodeMirrorBlocks(
+    view,
+    selected.map((block) => block.from),
+    target.from,
+    direction < 0 ? "before" : "after",
+    selected[0]?.depth,
+  );
+  if (!moved) {
+    view.dispatch({ annotations: isolateHistory.of("after") });
+    return false;
   }
-  const change = state.changes({ from, to, insert });
+  if (selected.length === 1) {
+    const current = blockAt(view, view.state.selection.main.head);
+    if (current && !protectedBlock(current)) {
+      setSelection(view, [current]);
+      view.dispatch({ annotations: isolateHistory.of("after") });
+      return true;
+    }
+  }
   view.dispatch({
-    changes: change,
-    annotations: isolateHistory.of("full"),
+    annotations: isolateHistory.of("after"),
     effects: setBlockSelection.of("block"),
-    selection: EditorSelection.range(movedFrom, movedFrom + selectedMarkdown.length),
-    userEvent: "move",
   });
   return true;
 }

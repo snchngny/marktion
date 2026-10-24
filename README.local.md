@@ -38,9 +38,9 @@ fenced/indented code、frontmatter、table、blockquoteでは通常の2 spaces�
 
 ## 視覚編集のブロック操作
 
-視覚編集面ではEscapeで現在のMarkdownブロックを選択し、Shift+↑/↓で隣接ブロックを選択範囲へ加えます。ブロック選択中にCtrl+Aを押すと文書全体へ広がり、Escapeで選択を解除します。Enterは内容を変更せず選択ブロックの先頭へ編集カーソルを戻します。Ctrl+Dで複製し、Backspace/Deleteで削除、Ctrl+Shift+↑/↓で隣へ移動します。各文書変更は一度のUndoで戻せます。Ctrl+Shift+4は既存のtask-list変換を実行します。
+視覚編集面ではEscapeで現在のMarkdownブロックを選択し、Shift+↑/↓で隣接ブロックを選択範囲へ加えます。通常のテキスト範囲を選んだ状態でもCtrl+Shift+↑/↓で、範囲に触れるブロック全体を隣へ移動できます。ブロック選択中にCtrl+Aを押すと文書全体へ広がり、Escapeで選択を解除します。Enterは内容を変更せず選択ブロックの先頭へ編集カーソルを戻します。Ctrl+Dで複製し、Backspace/Deleteで削除、Ctrl+Shift+↑/↓で隣へ移動します。選択した複数ブロックは、その中のドラッグハンドルからまとめて移動できます。各文書変更は一度のUndoで戻せます。Ctrl+Shift+4は既存のtask-list変換を実行します。
 
-ネストしたlist itemは現在カーソルの最も内側のitemを選択します。親itemを選んだ場合は子孫を含めて一つのブロックとして扱い、子itemを重複選択しません。ブロックの拡張・移動はlist内で同じ親と深さの兄弟に限ります。frontmatter、コード、表、HTML、数式、Mermaid内はブロック選択操作を開始しません。既存の通常テキスト範囲選択、IME変換、read-only動作は優先します。このキー操作は視覚編集面だけで有効で、Markdown source modeには追加しません。
+ネストしたlist itemは現在カーソルの最も内側のitemを選択します。親itemを選んだ場合は子孫を含めて一つのブロックとして扱い、子itemを重複選択しません。ブロックの拡張・移動はlist内で同じ親と深さの兄弟に限ります。複数の段落ブロックは空行を維持して一括移動し、listと段落の混在、異なる深さや親をまたぐlist itemの一括移動は行いません。frontmatter、コード、表、HTML、数式、Mermaidを部分選択した移動は行いません。IME変換中とread-only中は移動しません。このキー操作は視覚編集面だけで有効で、Markdown source modeには追加しません。
 
 ## Callout解析の共有
 

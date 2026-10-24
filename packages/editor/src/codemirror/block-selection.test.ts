@@ -96,6 +96,55 @@ describe("blockSelectionPlugin", () => {
     expect(view.state.doc.toString()).toBe("First\n\nSecond\n\nThird");
   });
 
+  it("moves an ordinary partial multi-block selection by whole blocks", () => {
+    const doc = "First paragraph\ncontinued\n\nSecond\n\nThird";
+    const view = createView(doc);
+    const start = doc.indexOf("paragraph") + 2;
+    const end = doc.indexOf("Second") + 3;
+    view.dispatch({ selection: EditorSelection.range(start, end) });
+
+    expect(press(view, "ArrowDown", { ctrl: true, shift: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe(
+      "Third\n\nFirst paragraph\ncontinued\n\nSecond",
+    );
+    expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe(
+      "First paragraph\ncontinued\n\nSecond",
+    );
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("keeps a one-block move selected and leaves the ordinary caret shortcut alone", () => {
+    const view = createView("First\n\nSecond\n\nThird");
+    view.dispatch({ selection: EditorSelection.range(1, 3) });
+    expect(press(view, "ArrowDown", { ctrl: true, shift: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("Second\n\nFirst\n\nThird");
+    expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe("First");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("First\n\nSecond\n\nThird");
+
+    const caret = createView("First\n\nSecond\n\nThird");
+    expect(press(caret, "ArrowDown", { ctrl: true, shift: true })).toBe(false);
+    expect(caret.state.doc.toString()).toBe("First\n\nSecond\n\nThird");
+  });
+
+  it("does not move a blank-only or multi-range selection", () => {
+    const view = createView("First\n\nSecond\n\nThird", false, [
+      EditorState.allowMultipleSelections.of(true),
+    ]);
+    const original = view.state.doc.toString();
+    view.dispatch({ selection: EditorSelection.range(5, 6) });
+    expect(press(view, "ArrowDown", { ctrl: true, shift: true })).toBe(false);
+    expect(view.state.doc.toString()).toBe(original);
+
+    view.dispatch({ selection: EditorSelection.create([
+      EditorSelection.range(0, 5),
+      EditorSelection.range(7, 13),
+    ]) });
+    press(view, "ArrowDown", { ctrl: true, shift: true });
+    expect(view.state.doc.toString()).toBe(original);
+  });
+
   it("duplicates and deletes blocks with one undo per action", () => {
     const view = createView("First\n\nSecond\n\nThird");
     view.dispatch({ changes: { from: 5, insert: "!" }, userEvent: "input" });
