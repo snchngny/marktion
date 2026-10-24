@@ -6,7 +6,7 @@ import {
   type Transaction,
 } from "@codemirror/state";
 import { EditorView, keymap, runScopeHandlers } from "@codemirror/view";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { codeMirrorBlockDragPlugin } from "./block-drag.ts";
 import { liveMarkdown } from "./index.ts";
 import { markdownEditingPlugin } from "./markdown-editing.ts";
@@ -19,6 +19,7 @@ function createView(
   selection: number | EditorSelection,
   blockToolbar = false,
   observedTransactions?: Transaction[],
+  readOnly = false,
 ) {
   const parent = document.createElement("div");
   document.body.append(parent);
@@ -28,6 +29,7 @@ function createView(
       doc,
       extensions: [
         EditorState.allowMultipleSelections.of(true),
+        EditorState.readOnly.of(readOnly),
         history(),
         keymap.of(defaultKeymap),
         liveMarkdown({
@@ -233,14 +235,14 @@ describe("markdownEditingPlugin", () => {
     expect(view.state.selection.main.to).toBe("Mock".length);
   });
 
-  it("keeps CodeMirror's native Enter behavior in a paragraph", () => {
+  it("splits a paragraph into two Markdown paragraphs on Enter", () => {
     const doc = "MockBeforeMockAfter";
     const position = "MockBefore".length;
     const view = createView(doc, position);
 
     expect(press(view, "Enter")).toBe(true);
-    expect(view.state.doc.toString()).toBe("MockBefore\nMockAfter");
-    expect(view.state.selection.main.head).toBe(position + 1);
+    expect(view.state.doc.toString()).toBe("MockBefore\n\nMockAfter");
+    expect(view.state.selection.main.head).toBe(position + 2);
   });
 
   it("keeps the caret on a new blank line before text", () => {
@@ -276,16 +278,16 @@ describe("markdownEditingPlugin", () => {
     expectFullHeightEmptyLines(view, 2);
   });
 
-  it("adds one editable blank line after the final character before the next line", () => {
+  it("splits paragraphs when Enter follows text before an existing line break", () => {
     const doc = "Before\nAfter";
     const position = "Before".length;
     const view = createView(doc, position);
     view.focus();
 
     expect(press(view, "Enter")).toBe(true);
-    expect(view.state.doc.toString()).toBe("Before\n\nAfter");
-    expect(view.state.selection.main.head).toBe(position + 1);
-    expectFullHeightEmptyLines(view, 1);
+    expect(view.state.doc.toString()).toBe("Before\n\n\nAfter");
+    expect(view.state.selection.main.head).toBe(position + 2);
+    expectFullHeightEmptyLines(view, 2);
   });
 
   it("keeps a single native newline at the end of the document", () => {
@@ -294,9 +296,9 @@ describe("markdownEditingPlugin", () => {
     view.focus();
 
     expect(press(view, "Enter")).toBe(true);
-    expect(view.state.doc.toString()).toBe("Before\n");
-    expect(view.state.selection.main.head).toBe(doc.length + 1);
-    expectFullHeightEmptyLines(view, 1);
+    expect(view.state.doc.toString()).toBe("Before\n\n");
+    expect(view.state.selection.main.head).toBe(doc.length + 2);
+    expectFullHeightEmptyLines(view, 2);
   });
 
   it("moves the caret with text across repeated Enter presses", () => {
@@ -307,14 +309,14 @@ describe("markdownEditingPlugin", () => {
 
     for (let presses = 1; presses <= 4; presses += 1) {
       expect(press(view, "Enter")).toBe(true);
-      const lineBreaks = presses;
+      const lineBreaks = presses + 1;
       expect(view.state.doc.toString()).toBe(
         `${before}${"\n".repeat(lineBreaks)}${after}`,
       );
       expect(view.state.selection.main.head).toBe(before.length + lineBreaks);
     }
 
-    expectFullHeightEmptyLines(view, 3);
+    expectFullHeightEmptyLines(view, 4);
 
     const position = view.state.selection.main.head;
     view.dispatch({
@@ -324,15 +326,15 @@ describe("markdownEditingPlugin", () => {
     });
 
     expect(view.state.doc.toString()).toBe(
-      `${before}\n\n\n\nTyped${after}`,
+      `${before}\n\n\n\n\nTyped${after}`,
     );
-    expectFullHeightEmptyLines(view, 3);
+    expectFullHeightEmptyLines(view, 4);
 
     view.dispatch({
       selection: EditorSelection.cursor(0),
       userEvent: "select.pointer",
     });
-    expectFullHeightEmptyLines(view, 3);
+    expectFullHeightEmptyLines(view, 4);
   });
 
   it("keeps surviving blank lines full height during backward deletion", () => {
@@ -347,7 +349,7 @@ describe("markdownEditingPlugin", () => {
 
     view.contentDOM.blur();
     expect(view.hasFocus).toBe(false);
-    expectFullHeightEmptyLines(view, 3);
+    expectFullHeightEmptyLines(view, 4);
 
     view.focus();
     view.dispatch({
@@ -355,18 +357,16 @@ describe("markdownEditingPlugin", () => {
       userEvent: "select.pointer",
     });
     expect(press(view, "Backspace")).toBe(true);
+    expect(view.state.doc.toString()).toBe(`${before}\n\n\n\n${after}`);
+    expectFullHeightEmptyLines(view, 3);
+
+    expect(press(view, "Backspace")).toBe(true);
     expect(view.state.doc.toString()).toBe(`${before}\n\n\n${after}`);
     expectFullHeightEmptyLines(view, 2);
 
     expect(press(view, "Backspace")).toBe(true);
     expect(view.state.doc.toString()).toBe(`${before}\n\n${after}`);
     expectFullHeightEmptyLines(view, 1);
-
-    expect(press(view, "Backspace")).toBe(true);
-    expect(view.state.doc.toString()).toBe(`${before}\n${after}`);
-    expect(
-      view.dom.querySelector(".cm-markra-empty-line"),
-    ).toBeNull();
   });
 
   it("keeps multiple inserted empty lines full height", () => {
@@ -484,6 +484,29 @@ describe("markdownEditingPlugin", () => {
 
     expect(press(view, "Enter")).toBe(true);
     expect(view.state.doc.toString()).toBe("- First\n- ");
+  });
+
+  it("lets CodeMirror end an empty list item on Enter", () => {
+    const view = createView("- First\n- ", "- First\n- ".length);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("- First\n");
+  });
+
+  it("leaves multi-cursor empty list handling to Markdown without dropping a cursor", () => {
+    const doc = "- First\n- ";
+    const view = createView(doc, EditorSelection.create([
+      EditorSelection.cursor("- First".length),
+      EditorSelection.cursor(doc.length),
+    ]));
+    const originalRanges = view.state.selection.ranges.map((range) => range.head);
+
+    press(view, "Enter");
+
+    expect(view.state.selection.ranges).toHaveLength(2);
+    expect(view.state.selection.ranges.map((range) => range.head)).toHaveLength(2);
+    expect(view.state.doc.toString()).toContain("- First");
+    expect(originalRanges).toHaveLength(2);
   });
 
   it("converts a plain paragraph into a root list item on Tab", () => {
@@ -776,5 +799,218 @@ describe("markdownEditingPlugin", () => {
 
     expect(press(view, "Enter", { shiftKey: true })).toBe(true);
     expect(view.state.doc.toString()).toContain("First line<br> |");
+  });
+
+  it("inserts a Markdown hard break with Shift+Enter in a paragraph", () => {
+    const doc = "FirstSecond";
+    const view = createView(doc, "First".length);
+
+    expect(press(view, "Enter", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("First\\\nSecond");
+    expect(view.state.selection.main.head).toBe("First\\\n".length);
+  });
+
+  it("leaves a heading for a normal paragraph when Enter is pressed", () => {
+    const doc = "## Heading";
+    const view = createView(doc, doc.length);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("## Heading\n\n");
+    expect(topLevelNodeNames(view)).toEqual(["ATXHeading2"]);
+  });
+
+  it("splits at the caret inside an ATX heading and leaves Setext headings to Markdown", () => {
+    const atx = "## Heading";
+    const atxView = createView(atx, atx.indexOf("Heading") + 3);
+    expect(press(atxView, "Enter")).toBe(true);
+    expect(atxView.state.doc.toString()).toBe("## Hea\n\nding");
+
+    const setext = "Heading\n=======";
+    const setextView = createView(setext, "Heading".length);
+    expect(press(setextView, "Enter")).toBe(true);
+    expect(setextView.state.doc.toString()).toBe("Heading\n\n=======");
+  });
+
+  it("uses native Enter at the start of a heading", () => {
+    const doc = "## Heading";
+    const view = createView(doc, 0);
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("\n## Heading");
+  });
+
+  it("does not add a literal Markdown hard-break marker inside a heading", () => {
+    const doc = "## Heading";
+    const view = createView(doc, doc.indexOf("Heading") + 3);
+
+    expect(press(view, "Enter", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).not.toContain("\\\n");
+  });
+
+  it("toggles a task checkbox with Ctrl+Enter as one undo step", () => {
+    const doc = "- [ ] Task";
+    const view = createView(doc, doc.indexOf("Task"));
+
+    expect(press(view, "Enter", { ctrlKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("- [x] Task");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+    expect(redo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("- [x] Task");
+    expect(press(view, "Enter", { ctrlKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("toggles distinct tasks at multiple cursors in one undo step", () => {
+    const doc = "- [ ] One\n- [ ] Two";
+    const view = createView(doc, EditorSelection.create([
+      EditorSelection.cursor(doc.indexOf("One")),
+      EditorSelection.cursor(doc.indexOf("Two")),
+    ]));
+
+    expect(press(view, "Enter", { ctrlKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("- [x] One\n- [x] Two");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("converts a typed empty task shortcut and keeps source syntax", () => {
+    const view = createView("[]", 2);
+    const handler = view.state.facet(EditorView.inputHandler).find((candidate) =>
+      candidate(view, 2, 2, " ", () => view.state.update({}))
+    );
+
+    expect(handler).toBeDefined();
+    expect(view.state.doc.toString()).toBe("- [ ] ");
+    expect(view.state.selection.main.head).toBe(6);
+  });
+
+  it("applies paragraph Enter to independent cursors in one history step", () => {
+    const doc = "AlphaBeta GammaDelta";
+    const view = createView(doc, EditorSelection.create([
+      EditorSelection.cursor("Alpha".length),
+      EditorSelection.cursor("AlphaBeta Gamma".length),
+    ]));
+
+    expect(press(view, "Enter")).toBe(true);
+    expect(view.state.doc.toString()).toBe("Alpha\n\nBeta Gamma\n\nDelta");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
+  it("applies Shift+Enter to a selection and keeps following text editable", () => {
+    const doc = "First selectedSecond";
+    const from = "First".length;
+    const to = "First selected".length;
+    const view = createView(doc, EditorSelection.create([EditorSelection.range(from, to)]));
+
+    expect(press(view, "Enter", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("First\\\nSecond");
+    const position = view.state.selection.main.head;
+    view.dispatch({
+      changes: { from: position, insert: "Typed" },
+      selection: EditorSelection.cursor(position + "Typed".length),
+      userEvent: "input.type",
+    });
+    expect(view.state.doc.toString()).toBe("First\\\nTypedSecond");
+    expect(press(view, "Backspace")).toBe(true);
+    expect(view.state.doc.toString()).toBe("First\\\nTypeSecond");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe("First\\\nSecond");
+  });
+
+  it("applies Shift+Enter to multiple paragraph cursors", () => {
+    const doc = "FirstOne SecondTwo";
+    const view = createView(doc, EditorSelection.create([
+      EditorSelection.cursor("First".length),
+      EditorSelection.cursor("FirstOne Second".length),
+    ]));
+
+    expect(press(view, "Enter", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).toBe("First\\\nOne Second\\\nTwo");
+  });
+
+  it.each([
+    ["fenced code", "```\nalpha\n```", "alpha"],
+    ["frontmatter", "---\ntitle: Test\n---\nBody", "Test"],
+    ["HTML", "<div>Alpha</div>\n\nBody", "Alpha"],
+    ["block math", "$$\nalpha\n$$", "alpha"],
+  ])("keeps Shift+Enter source behavior inside %s", (_label, doc, target) => {
+    const position = doc.indexOf(target) + Math.floor(target.length / 2);
+    const view = createView(doc, position);
+
+    expect(press(view, "Enter", { shiftKey: true })).toBe(true);
+    expect(view.state.doc.toString()).not.toContain("\\\n");
+    expect(view.state.doc.toString()).toContain("\n");
+  });
+
+  it("does not transform task input while read-only or composing", async () => {
+    const readOnlyView = createView("[]", 2, false, undefined, true);
+    const readOnlyHandlers = readOnlyView.state.facet(EditorView.inputHandler);
+    expect(readOnlyHandlers.some((handler) =>
+      handler(readOnlyView, 2, 2, " ", () => readOnlyView.state.update({}))
+    )).toBe(false);
+    expect(readOnlyView.state.doc.toString()).toBe("[]");
+
+    const composingView = createView("[]", 2);
+    composingView.contentDOM.dispatchEvent(new CompositionEvent("compositionstart", {
+      bubbles: true,
+      data: "",
+    }));
+    composingView.contentDOM.append("中");
+    composingView.contentDOM.dispatchEvent(new InputEvent("input", {
+      bubbles: true,
+      data: "中",
+      inputType: "insertCompositionText",
+    }));
+    await vi.waitFor(() => expect(composingView.composing).toBe(true));
+    expect(composingView.composing).toBe(true);
+    const composingHandlers = composingView.state.facet(EditorView.inputHandler);
+    expect(composingHandlers.some((handler) =>
+      handler(composingView, 2, 2, " ", () => composingView.state.update({}))
+    )).toBe(false);
+    expect(composingView.state.doc.toString()).toBe("[]中");
+    composingView.contentDOM.dispatchEvent(new CompositionEvent("compositionend", {
+      bubbles: true,
+      data: "",
+    }));
+  });
+
+  it("recreates the Markdown task source and parser structure after editing", () => {
+    const original = "- [ ] Task";
+    const firstView = createView(original, original.indexOf("Task"));
+    expect(press(firstView, "Enter", { ctrlKey: true })).toBe(true);
+    const savedSource = firstView.state.doc.toString();
+    const reopenedView = createView(savedSource, savedSource.length);
+
+    expect(reopenedView.state.doc.toString()).toBe("- [x] Task");
+    expect(topLevelNodeNames(reopenedView)).toEqual(topLevelNodeNames(firstView));
+  });
+
+  it("reopens authored hard breaks with the same Markdown structure", () => {
+    const source = "First\\\nSecond";
+    const firstView = createView(source, source.length);
+    const reopenedView = createView(firstView.state.doc.toString(), source.length);
+
+    expect(reopenedView.state.doc.toString()).toBe(source);
+    expect(topLevelNodeNames(reopenedView)).toEqual(topLevelNodeNames(firstView));
+  });
+
+  it("protects later math blocks and ignores math-like text inside code", () => {
+    const mathDoc = "Before\n\n$$\nalpha\n$$\n\n$$\nbeta\n$$\n\nAfter";
+    const mathPosition = mathDoc.indexOf("beta") + 2;
+    const mathView = createView(mathDoc, mathPosition);
+    expect(press(mathView, "Enter", { shiftKey: true })).toBe(true);
+    expect(mathView.state.doc.toString()).toBe(
+      `${mathDoc.slice(0, mathPosition)}\n${mathDoc.slice(mathPosition)}`,
+    );
+
+    const codeDoc = "```\n$$\nalpha\n$$\n```";
+    const codePosition = codeDoc.indexOf("alpha") + 2;
+    const codeView = createView(codeDoc, codePosition);
+    expect(press(codeView, "Enter", { shiftKey: true })).toBe(true);
+    expect(codeView.state.doc.toString()).toBe(
+      `${codeDoc.slice(0, codePosition)}\n${codeDoc.slice(codePosition)}`,
+    );
   });
 });

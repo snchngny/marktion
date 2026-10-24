@@ -1,3 +1,4 @@
+import { insertNewlineContinueMarkup } from "@codemirror/lang-markdown";
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
 import { isolateHistory } from "@codemirror/commands";
@@ -10,6 +11,7 @@ import {
   type Transaction,
 } from "@codemirror/state";
 import { EditorView, keymap, type ViewUpdate } from "@codemirror/view";
+import { findCodeMirrorMathRanges } from "./math-preview.ts";
 import { isInsidePreformattedBlock } from "./blank-lines.ts";
 import { defineMarkraPlugin } from "./plugin.ts";
 
@@ -17,6 +19,10 @@ const indentation = "  ";
 const quotePrefixPattern = /^([\t ]*(?:>[\t ]*)+)/u;
 const incompleteInlineDestinationPattern =
   /(?:^|[^\\])!?\[(?:\\.|[^\]\\])*\]\((?:\\.|[^)\n])*$/u;
+const mathRangesByDocument = new WeakMap<
+  EditorState["doc"],
+  ReturnType<typeof findCodeMirrorMathRanges>
+>();
 
 function isEditable(view: EditorView) {
   return !view.state.facet(EditorState.readOnly);
@@ -90,8 +96,161 @@ function paragraphAt(view: EditorView, position: number) {
   return ancestor(tree.resolveInner(position, side), ["Paragraph"]);
 }
 
+function continueMarkdownList(view: EditorView) {
+  if (!isEditable(view) || view.composing) return false;
+  const position = view.state.selection.main.head;
+  const line = view.state.doc.lineAt(position);
+  const inList = listItemAt(view, position) ||
+    /^[\t ]{0,3}(?:[-+*]|\d+[.)])(?:[\t ]+|$)/u.test(line.text);
+  if (!inList || protectedMarkdownAt(view, position)) return false;
+  return insertNewlineContinueMarkup(view);
+}
+
+function endEmptyListItem(view: EditorView) {
+  if (!isEditable(view) || view.composing) return false;
+  const range = view.state.selection.main;
+  if (view.state.selection.ranges.length !== 1 || !range.empty) return false;
+  const line = view.state.doc.lineAt(range.head);
+  if (
+    range.head !== line.to ||
+    !/^[\t ]*(?:[-+*]|\d+[.)])[\t ]+$/u.test(line.text) ||
+    isInsidePreformattedBlock(view.state, range.head)
+  ) return false;
+  view.dispatch({
+    changes: { from: line.from, to: line.to, insert: "" },
+    selection: EditorSelection.cursor(line.from),
+    userEvent: "input",
+    annotations: isolateHistory.of("full"),
+  });
+  return true;
+}
+
+function editableParagraphAt(view: EditorView, position: number) {
+  const node = paragraphAt(view, position);
+  if (node) return ancestor(node, ["ListItem", "Blockquote"]) ? null : node;
+  const tree = ensureSyntaxTree(view.state, position, 100) ?? syntaxTree(view.state);
+  const heading = ancestor(
+    tree.resolveInner(position, position === view.state.doc.length ? -1 : 1),
+    [
+      "ATXHeading1",
+      "ATXHeading2",
+      "ATXHeading3",
+      "ATXHeading4",
+      "ATXHeading5",
+      "ATXHeading6",
+    ],
+  );
+  return heading && !ancestor(heading, ["ListItem", "Blockquote"]) ? heading : null;
+}
+
+function insertParagraphBreak(view: EditorView) {
+  if (!isEditable(view) || view.composing) return false;
+  const changesByPosition = new Map<number, ChangeSpec>();
+  for (const range of view.state.selection.ranges) {
+    const line = view.state.doc.lineAt(range.head);
+    if (range.empty && (line.text.length === 0 || range.head === line.from)) return false;
+    if (
+      protectedMarkdownAt(view, range.from) ||
+      protectedMarkdownAt(view, range.to)
+    ) return false;
+    const block = editableParagraphAt(view, range.from);
+    if (!block || !sameNode(block, editableParagraphAt(view, range.to))) return false;
+    changesByPosition.set(range.from, { from: range.from, to: range.to, insert: "\n\n" });
+  }
+  if (changesByPosition.size === 0) return false;
+  const changes = [...changesByPosition.values()];
+  const changeSet = view.state.changes(changes);
+  view.dispatch({
+    changes: changeSet,
+    selection: EditorSelection.create(
+      view.state.selection.ranges.map((range) =>
+        EditorSelection.cursor(changeSet.mapPos(range.from, -1) + 2)),
+      view.state.selection.mainIndex,
+    ),
+    userEvent: "input",
+    annotations: isolateHistory.of("full"),
+  });
+  return true;
+}
+
+function insertMarkdownHardBreak(view: EditorView) {
+  if (!isEditable(view) || view.composing) return false;
+  const ranges = view.state.selection.ranges;
+  if (ranges.some((range) =>
+    protectedMarkdownAt(view, range.from) ||
+    protectedMarkdownAt(view, range.to) ||
+    editableParagraphAt(view, range.from)?.name !== "Paragraph" ||
+    !sameNode(paragraphAt(view, range.from), paragraphAt(view, range.to))
+  )) return false;
+  const changesByPosition = new Map<number, ChangeSpec>();
+  for (const range of ranges) {
+    changesByPosition.set(range.from, {
+      from: range.from,
+      to: range.to,
+      insert: "\\\n",
+    });
+  }
+  const changes = [...changesByPosition.values()];
+  const changeSet = view.state.changes(changes);
+  view.dispatch({
+    changes: changeSet,
+    selection: EditorSelection.create(
+      ranges.map((range) =>
+        EditorSelection.cursor(changeSet.mapPos(range.from, -1) + 2)),
+      view.state.selection.mainIndex,
+    ),
+    userEvent: "input",
+    annotations: isolateHistory.of("full"),
+  });
+  return true;
+}
+
+function toggleTaskAtCursor(view: EditorView) {
+  if (!isEditable(view) || view.composing) return false;
+  const changes = new Map<number, ChangeSpec>();
+  for (const range of view.state.selection.ranges) {
+    const line = view.state.doc.lineAt(range.head);
+    if (protectedMarkdownAt(view, line.from)) return false;
+    const match = /^([\t ]*(?:[-+*]|\d+[.)])[\t ]+\[)( |x|X)(\])/u.exec(line.text);
+    if (!match) return false;
+    const from = line.from + match[1].length;
+    changes.set(from, { from, to: from + 1, insert: match[2] === " " ? "x" : " " });
+  }
+  if (changes.size === 0) return false;
+  view.dispatch({
+    changes: [...changes.values()],
+    userEvent: "input",
+    annotations: isolateHistory.of("full"),
+  });
+  return true;
+}
+
+function taskListInput(view: EditorView, from: number, to: number, text: string) {
+  if (!isEditable(view) || view.composing || text !== " ") return false;
+  const line = view.state.doc.lineAt(from);
+  if (to !== from || from !== line.to) return false;
+  const before = line.text.slice(0, from - line.from);
+  const match = /^([\t ]*)\[\]$/u.exec(before);
+  if (!match || protectedMarkdownAt(view, from)) return false;
+  const insertion = `${match[1]}- [ ] `;
+  view.dispatch({
+    changes: { from: line.from, to: from, insert: insertion },
+    selection: EditorSelection.cursor(line.from + insertion.length),
+    userEvent: "input",
+  });
+  return true;
+}
+
 function protectedMarkdownAt(view: EditorView, position: number) {
   if (isInsidePreformattedBlock(view.state, position)) return true;
+  let mathRanges = mathRangesByDocument.get(view.state.doc);
+  if (!mathRanges) {
+    mathRanges = findCodeMirrorMathRanges(view.state);
+    mathRangesByDocument.set(view.state.doc, mathRanges);
+  }
+  if (
+    mathRanges.some((range) => position >= range.from && position <= range.to)
+  ) return true;
   const tree = ensureSyntaxTree(view.state, position, 100) ?? syntaxTree(view.state);
   const node = tree.resolveInner(position, 1);
   return Boolean(ancestor(node, [
@@ -737,7 +896,11 @@ export function markdownEditingPlugin() {
     id: "markra.markdown-editing",
     extension: [
       EditorView.mouseSelectionStyle.of(selectTripleClickedLine),
+      EditorView.inputHandler.of(taskListInput),
       EditorState.transactionFilter.of(keepJoinedLineCaretsAfterText),
+      Prec.highest(keymap.of([
+        { key: "Enter", run: endEmptyListItem },
+      ])),
       Prec.high(keymap.of([
         { key: "Backspace", run: removeLeadingEmptyLineBackward },
         {
@@ -745,12 +908,24 @@ export function markdownEditingPlugin() {
           run: confirmIncompleteInlineDestination,
         },
         {
+          key: "Enter",
+          run(view) {
+            return continueMarkdownList(view) || insertParagraphBreak(view);
+          },
+        },
+        { key: "Ctrl-Enter", run: toggleTaskAtCursor },
+        {
           key: "Alt-l",
           mac: "Ctrl-l",
           run: selectLinesWithoutTrailingBreak,
         },
         { key: "Tab", run: handleTab, shift: handleShiftTab },
-        { key: "Shift-Enter", run: insertContextualHardBreak },
+        {
+          key: "Shift-Enter",
+          run(view) {
+            return insertContextualHardBreak(view) || insertMarkdownHardBreak(view);
+          },
+        },
       ])),
     ],
   });
