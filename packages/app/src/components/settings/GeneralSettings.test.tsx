@@ -47,7 +47,7 @@ describe("GeneralSettings", () => {
 
     render(<GeneralSettings {...props} />);
 
-    expect(screen.getByRole("status")).toHaveTextContent("Markra 0.0.8 is available.");
+    expect(screen.getByRole("status")).toHaveTextContent("marktion 0.0.8 is available.");
     expect(screen.getByRole("button", { name: "Check for updates" })).toBeInTheDocument();
   });
 
@@ -222,7 +222,7 @@ describe("GeneralSettings", () => {
         {...baseProps}
         shellCommandStatus={{
           commandPath: "/mock-bin/markra",
-          targetPath: "/Applications/Markra.app/Contents/MacOS/markra",
+          targetPath: "/Applications/marktion.app/Contents/MacOS/markra",
           status: "missing"
         }}
       />
@@ -236,7 +236,7 @@ describe("GeneralSettings", () => {
         {...baseProps}
         shellCommandStatus={{
           commandPath: "/mock-bin/markra",
-          targetPath: "/Applications/Markra.app/Contents/MacOS/markra",
+          targetPath: "/Applications/marktion.app/Contents/MacOS/markra",
           status: "needsRepair"
         }}
       />
@@ -249,7 +249,7 @@ describe("GeneralSettings", () => {
         {...baseProps}
         shellCommandStatus={{
           commandPath: "/mock-bin/markra",
-          targetPath: "/Applications/Markra.app/Contents/MacOS/markra",
+          targetPath: "/Applications/marktion.app/Contents/MacOS/markra",
           status: "installed"
         }}
       />

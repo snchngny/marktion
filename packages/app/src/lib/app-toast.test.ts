@@ -82,12 +82,12 @@ describe("appToast", () => {
   it("routes diagnostic notices through the bottom-right notice toaster", () => {
     showAppToast({
       id: "runtime-error-diagnostics",
-      message: "Markra caught an error.",
+      message: "marktion caught an error.",
       status: "error",
       surface: "notice"
     });
 
-    expect(mockedToast.error).toHaveBeenCalledWith("Markra caught an error.", {
+    expect(mockedToast.error).toHaveBeenCalledWith("marktion caught an error.", {
       duration: Infinity,
       id: "runtime-error-diagnostics",
       position: "bottom-right",

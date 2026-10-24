@@ -2,11 +2,11 @@ import { getMarkdownOutline, getWordCount } from "./markdown";
 
 describe("markdown helpers", () => {
   it("counts words in mixed prose", () => {
-    expect(getWordCount("Markra writes local Markdown notes 123")).toBe(6);
+    expect(getWordCount("marktion writes local Markdown notes 123")).toBe(6);
   });
 
   it("counts plain English words and numbers", () => {
-    expect(getWordCount("Spring notes bring clear fresh air into Markra drafts 2026")).toBe(10);
+    expect(getWordCount("Spring notes bring clear fresh air into marktion drafts 2026")).toBe(10);
     expect(getWordCount("Write Markdown notes 2026")).toBe(4);
   });
 
@@ -34,7 +34,7 @@ describe("markdown helpers", () => {
     ]);
   });
 
-  it("extracts readable titles from Markra highlight and math headings", () => {
+  it("extracts readable titles from marktion highlight and math headings", () => {
     expect(getMarkdownOutline("# ==Marked== formula $x^2$")).toEqual([
       { level: 1, title: "Marked formula x^2", titleMarkdown: "==Marked== formula $x^2$" }
     ]);

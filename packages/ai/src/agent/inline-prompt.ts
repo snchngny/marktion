@@ -71,7 +71,7 @@ export function buildInlineAiMessages({
   return [
     {
       content: [
-        "You are Markra's inline Markdown assistant.",
+        "You are marktion's inline Markdown assistant.",
         "If the user asks a question, answer it directly using the target text and provided context.",
         "If the answer is not present in the provided context, say that briefly.",
         "For editing requests: Return only the Markdown fragment that should be inserted or used as the replacement.",

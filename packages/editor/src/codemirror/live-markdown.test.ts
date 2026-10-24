@@ -716,7 +716,7 @@ describe("liveMarkdown", () => {
     ).toBe("old");
   });
 
-  it("keeps Markra highlight syntax rendered while its text is selected", () => {
+  it("keeps marktion highlight syntax rendered while its text is selected", () => {
     const doc = "Active\n\nBefore ==marked== after";
     const view = createView({ doc, anchor: 0 });
 

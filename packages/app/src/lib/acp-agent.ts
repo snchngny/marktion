@@ -29,7 +29,7 @@ import type { AcpAgentSettings } from "./settings/app-settings";
 
 const markraAcpClientInfo = {
   name: "markra",
-  title: "Markra",
+  title: "marktion",
   // ACP 0.23 agents reject clientInfo when its required version is missing.
   version: appVersion
 };
@@ -148,7 +148,7 @@ export async function runAcpDocumentAgent({
         const safeOutcome = safeAcpPermissionOutcome(request.options);
         const startSummary = onPermissionRequest
           ? "Waiting for user permission."
-          : acpPermissionOutcomeSummary(safeOutcome, request.options, "Markra");
+          : acpPermissionOutcomeSummary(safeOutcome, request.options, "marktion");
         const startDetails = acpPermissionDetails(request, startSummary, "pending");
 
         onEvent?.({
@@ -165,7 +165,7 @@ export async function runAcpDocumentAgent({
               toolCallId
             })
           : safeOutcome;
-        const actor = onPermissionRequest ? "user" : "Markra";
+        const actor = onPermissionRequest ? "user" : "marktion";
         const endSummary = acpPermissionOutcomeSummary(outcome, request.options, actor);
         const endDetails = acpPermissionDetails(request, endSummary, outcome.outcome);
 
@@ -833,7 +833,7 @@ function acpPermissionDetails(request: AcpPermissionRequest, summary: string, st
 function acpPermissionOutcomeSummary(
   outcome: AcpPermissionRequestOutcome,
   options: AcpPermissionRequest["options"],
-  actor: "Markra" | "user"
+  actor: "marktion" | "user"
 ) {
   if (outcome.outcome === "cancelled") return `Permission cancelled by ${actor}.`;
 
@@ -1186,7 +1186,7 @@ function createAcpInlinePromptBlocks({
   return [
     {
       text: [
-        "Markra inline edit task:",
+        "marktion inline edit task:",
         systemPrompt,
         targetRange ? `Target range:\n${targetRange}` : null,
         userPrompt
@@ -1204,7 +1204,7 @@ function formatAcpEditorContextText(selection: AiSelectionContext | null | undef
   const textLabel = source === "block" ? "Block text:" : "Selected text:";
 
   return [
-    "Markra editor context:",
+    "marktion editor context:",
     snapshotLabel,
     `Range: ${selection.from}-${selection.to}`,
     `Cursor: ${selection.cursor ?? selection.to}`,

@@ -15,7 +15,7 @@ describe("webSearch", () => {
       [
         "<html><head><title>Ignored shell title</title></head><body>",
         "<nav>navigation</nav>",
-        "<article><h1>Launch notes</h1><p>Markra can now read pages.</p><script>bad()</script></article>",
+        "<article><h1>Launch notes</h1><p>marktion can now read pages.</p><script>bad()</script></article>",
         "</body></html>"
       ].join(""),
       "https://example.com/post",
@@ -24,7 +24,7 @@ describe("webSearch", () => {
 
     expect(extracted.title).toBe("Launch notes");
     expect(extracted.content).toContain("# Launch notes");
-    expect(extracted.content).toContain("Markra can now read pages.");
+    expect(extracted.content).toContain("marktion can now read pages.");
     expect(extracted.content).not.toContain("navigation");
     expect(extracted.content).not.toContain("bad()");
   });

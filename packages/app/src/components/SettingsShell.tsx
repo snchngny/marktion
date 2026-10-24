@@ -167,7 +167,7 @@ export function SettingsSidebar({
       </nav>
 
       <div className="border-t border-(--border-default) px-7 py-4 text-[12px] leading-5 font-[560] text-(--text-secondary) max-[700px]:hidden">
-        Markra v{appVersion}
+        marktion v{appVersion}
       </div>
     </aside>
   );

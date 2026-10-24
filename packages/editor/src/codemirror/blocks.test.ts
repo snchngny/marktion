@@ -47,7 +47,7 @@ afterEach(() => {
 });
 
 describe("blocksPlugin", () => {
-  it("publishes stable Markra-friendly slash-menu actions", () => {
+  it("publishes stable marktion-friendly slash-menu actions", () => {
     const view = createView();
 
     expect(
@@ -294,7 +294,7 @@ describe("blocksPlugin", () => {
     expect(runMarkraCommand(view, "block.quote")).toBe(false);
   });
 
-  it("provides the same heading shortcut family used by Markra", () => {
+  it("provides the same heading shortcut family used by marktion", () => {
     const view = createView({ doc: "Alpha", from: 2, to: 2 });
     const event = new KeyboardEvent("keydown", {
       altKey: true,

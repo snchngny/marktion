@@ -485,11 +485,11 @@ mod tests {
     fn parses_custom_headers() {
         let mut headers = HashMap::new();
         headers.insert("accept".to_string(), "text/html".to_string());
-        headers.insert("user-agent".to_string(), "Markra".to_string());
+        headers.insert("user-agent".to_string(), "marktion".to_string());
 
         let parsed = parse_headers(&headers).expect("headers should parse");
 
         assert_eq!(parsed.get("accept").unwrap(), "text/html");
-        assert_eq!(parsed.get("user-agent").unwrap(), "Markra");
+        assert_eq!(parsed.get("user-agent").unwrap(), "marktion");
     }
 }

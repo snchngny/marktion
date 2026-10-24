@@ -177,7 +177,7 @@ describe("AiSettings", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Experimental. Suggest Markra AI for complex inline requests based on local input structure. Turn it off if the prompt feels too eager."
+        "Experimental. Suggest marktion AI for complex inline requests based on local input structure. Turn it off if the prompt feels too eager."
       )
     ).toBeInTheDocument();
 
@@ -197,7 +197,7 @@ describe("AiSettings", () => {
       showAiSelectionToolbarOnSelection: true
     });
 
-    fireEvent.click(screen.getByRole("switch", { name: "Suggest Markra AI for complex inline requests" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Suggest marktion AI for complex inline requests" }));
 
     expect(onUpdatePreferences).toHaveBeenCalledWith({
       ...defaultEditorPreferences,

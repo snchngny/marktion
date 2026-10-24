@@ -53,7 +53,7 @@ describe("ACP client", () => {
 
     client.subscribe((update) => updates.push(update));
 
-    const initialize = client.initialize({ name: "markra", title: "Markra", version: "0.0.0-test" });
+    const initialize = client.initialize({ name: "markra", title: "marktion", version: "0.0.0-test" });
     expect(lastRequest(sent)).toMatchObject({
       method: "initialize",
       params: {

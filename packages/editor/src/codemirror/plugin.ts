@@ -79,13 +79,13 @@ function createRegistry(plugins: readonly MarkraPlugin[]): MarkraRegistry {
 
   for (const plugin of plugins) {
     if (pluginIds.has(plugin.id)) {
-      throw new Error(`Duplicate Markra plugin id "${plugin.id}"`);
+      throw new Error(`Duplicate marktion plugin id "${plugin.id}"`);
     }
     pluginIds.add(plugin.id);
 
     for (const command of plugin.commands ?? []) {
       if (commands.has(command.id)) {
-        throw new Error(`Duplicate Markra command id "${command.id}"`);
+        throw new Error(`Duplicate marktion command id "${command.id}"`);
       }
       commands.set(command.id, { command, plugin: plugin.id });
     }
@@ -96,7 +96,7 @@ function createRegistry(plugins: readonly MarkraPlugin[]): MarkraRegistry {
   for (const contribution of ui) {
     if (!commands.has(contribution.command)) {
       throw new Error(
-        `Unknown Markra command id "${contribution.command}" in UI contribution`,
+        `Unknown marktion command id "${contribution.command}" in UI contribution`,
       );
     }
   }
@@ -110,7 +110,7 @@ const registryFacet = Facet.define<MarkraPlugin, MarkraRegistry>({
 
 export function defineMarkraPlugin(plugin: MarkraPlugin): MarkraPlugin {
   if (!plugin.id.trim()) {
-    throw new Error("Markra plugin id must not be empty");
+    throw new Error("marktion plugin id must not be empty");
   }
   return plugin;
 }
@@ -171,7 +171,7 @@ export function listMarkraUi(
     .map((contribution) => {
       const registered = registry.commands.get(contribution.command);
       if (!registered) {
-        throw new Error(`Unknown Markra command id "${contribution.command}"`);
+        throw new Error(`Unknown marktion command id "${contribution.command}"`);
       }
 
       const { command, plugin } = registered;

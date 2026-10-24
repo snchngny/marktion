@@ -289,7 +289,7 @@ describe("linksPlugin", () => {
     expect(open).toHaveBeenCalledTimes(2);
   });
 
-  it("lets Markra resolve application links through a host callback", () => {
+  it("lets marktion resolve application links through a host callback", () => {
     const doc = "Open [Mock document](markra://documents/mock.md)";
     const open = vi.fn();
     const resolveTarget = vi.fn(({ source }) =>

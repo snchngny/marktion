@@ -56,7 +56,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("Markra slash menu", () => {
+describe("marktion slash menu", () => {
   it("stays opt-in so a host never gets invisible keyboard interception", () => {
     const view = createView("/", false);
 

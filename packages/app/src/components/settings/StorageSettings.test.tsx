@@ -22,7 +22,7 @@ describe("StorageSettings", () => {
     expect(settingsBackupRow).not.toBeNull();
     expect(
       within(settingsBackupRow as HTMLElement).getByText(
-        "Back up or restore portable Markra settings with the selected storage type."
+        "Back up or restore portable marktion settings with the selected storage type."
       )
     ).toBeInTheDocument();
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isLocalAttachmentHref } from "./markdown-link-target";
 
 describe("isLocalAttachmentHref", () => {
-  it("keeps Markra's existing local attachment routing contract", () => {
+  it("keeps marktion's existing local attachment routing contract", () => {
     expect(isLocalAttachmentHref("assets/synthetic.pdf")).toBe(true);
     expect(isLocalAttachmentHref("../images/synthetic.png#preview")).toBe(true);
     expect(isLocalAttachmentHref("file:///synthetic/attachment.pdf")).toBe(true);

@@ -319,14 +319,14 @@ describe("AI provider requests", () => {
       buildAiProviderModelsRequest(
         provider({
           baseUrl: "https://proxy.example.test/v1",
-          customHeaders: '{"HTTP-Referer":"https://markra.app","X-Title":"Markra"}',
+          customHeaders: '{"HTTP-Referer":"https://markra.app","X-Title":"marktion"}',
           type: "openai-compatible"
         } as Partial<AiProviderConfig>)
       )
     ).toMatchObject({
       headers: expect.objectContaining({
         "HTTP-Referer": "https://markra.app",
-        "X-Title": "Markra"
+        "X-Title": "marktion"
       })
     });
   });

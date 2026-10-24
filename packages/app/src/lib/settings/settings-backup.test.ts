@@ -257,12 +257,12 @@ describe("settings backup files", () => {
 
   it("rejects invalid or unsupported backup files", () => {
     expect(() => restoreSettingsBackupFile("{not json", portableSettings()))
-      .toThrow("Invalid Markra settings backup file.");
+      .toThrow("Invalid marktion settings backup file.");
     expect(() => restoreSettingsBackupFile(JSON.stringify({
       format: "markra-settings-backup",
       includesSensitiveSettings: false,
       settings: {},
       version: 2
-    }), portableSettings())).toThrow("Invalid Markra settings backup file.");
+    }), portableSettings())).toThrow("Invalid marktion settings backup file.");
   });
 });

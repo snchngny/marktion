@@ -221,13 +221,13 @@ describe("AiProviderConnectionSection", () => {
     expect(within(dialog).getByText("Enter a valid JSON object.")).toBeInTheDocument();
     expect(updateSelectedProvider).not.toHaveBeenCalled();
 
-    replaceCodeMirrorDoc(editorView, '{"X-Title":"Markra"}');
+    replaceCodeMirrorDoc(editorView, '{"X-Title":"marktion"}');
     fireEvent.click(within(dialog).getByRole("button", { name: "Save custom headers" }));
     expect(updateSelectedProvider).toHaveBeenCalledWith(expect.any(Function));
     const headerUpdater = updateSelectedProvider.mock.calls.at(-1)?.[0] as (current: AiProviderConfig) => AiProviderConfig;
 
     expect(headerUpdater(provider())).toMatchObject({
-      customHeaders: '{"X-Title":"Markra"}'
+      customHeaders: '{"X-Title":"marktion"}'
     });
     expect(screen.queryByRole("dialog", { name: "Custom headers" })).not.toBeInTheDocument();
   });

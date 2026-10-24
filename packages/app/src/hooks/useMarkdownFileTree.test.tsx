@@ -1287,7 +1287,7 @@ describe("useMarkdownFileTree", () => {
     }
   });
 
-  it("does not open a remembered markdown folder after it was deleted outside Markra", async () => {
+  it("does not open a remembered markdown folder after it was deleted outside marktion", async () => {
     mockedGetStoredRecentMarkdownFolders.mockResolvedValue([
       { name: "notes", path: "/recent/notes" }
     ]);

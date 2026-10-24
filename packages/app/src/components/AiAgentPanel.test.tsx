@@ -79,7 +79,7 @@ describe("AiAgentPanel", () => {
     fireEvent.change(fileInput!, { target: { files: [file] } });
     expect(addAttachments).toHaveBeenCalledWith([file]);
 
-    fireEvent.paste(screen.getByRole("textbox", { name: "Markra AI message" }), {
+    fireEvent.paste(screen.getByRole("textbox", { name: "marktion AI message" }), {
       clipboardData: {
         items: [{ getAsFile: () => file, kind: "file", type: "image/png" }]
       }
@@ -126,17 +126,17 @@ describe("AiAgentPanel", () => {
       onClose: close
     });
 
-    expect(screen.getByRole("complementary", { name: "Markra AI" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Markra AI" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "marktion AI" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "marktion AI" })).toBeInTheDocument();
     expect(screen.getByText("OpenAI · GPT-5.5")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Markra AI message" })).toHaveAttribute("placeholder", "Ask Markra AI...");
-    expect(screen.getByRole("button", { name: "Close Markra AI" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "marktion AI message" })).toHaveAttribute("placeholder", "Ask marktion AI...");
+    expect(screen.getByRole("button", { name: "Close marktion AI" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sessions" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Close Markra AI" })).toHaveClass("z-30");
+    expect(screen.getByRole("button", { name: "Close marktion AI" })).toHaveClass("z-30");
     expect(container.querySelector(".ai-agent-panel")).toHaveClass("border-l");
     expect(container.querySelector(".ai-agent-panel")).toHaveClass("z-20");
 
-    fireEvent.click(screen.getByRole("button", { name: "Close Markra AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close marktion AI" }));
 
     expect(close).toHaveBeenCalledTimes(1);
   });
@@ -275,7 +275,7 @@ describe("AiAgentPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dismiss workspace plan confirmation" }));
 
     expect(screen.queryByRole("region", { name: "Workspace plan confirmation" })).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Markra AI message" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "marktion AI message" })).toBeInTheDocument();
   });
 
   it("shows the current turn context in a collapsible panel", () => {
@@ -313,7 +313,7 @@ describe("AiAgentPanel", () => {
       onClose: close
     });
 
-    const collapseButton = screen.getByRole("button", { name: "Collapse Markra AI" });
+    const collapseButton = screen.getByRole("button", { name: "Collapse marktion AI" });
 
     expect(collapseButton).toContainElement(container.querySelector(".lucide-bot"));
 
@@ -488,7 +488,7 @@ describe("AiAgentPanel", () => {
       <Harness />
     );
 
-    const input = screen.getByRole("textbox", { name: "Markra AI message" });
+    const input = screen.getByRole("textbox", { name: "marktion AI message" });
     fireEvent.change(input, { target: { value: "Summarize this note" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
@@ -528,7 +528,7 @@ describe("AiAgentPanel", () => {
     expect(editButton).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Summarize synthetic notes").closest(".ai-chat-markdown")?.parentElement).toHaveClass("ring-2");
 
-    const input = screen.getByRole("textbox", { name: "Markra AI message" });
+    const input = screen.getByRole("textbox", { name: "marktion AI message" });
     const cancelEditButton = screen.getByRole("button", { name: "Cancel edit" });
     cancelEditButton.focus();
     fireEvent.click(cancelEditButton);
@@ -571,7 +571,7 @@ describe("AiAgentPanel", () => {
     render(<Harness />);
 
     fireEvent.click(screen.getByRole("button", { name: "Edit message" }));
-    const input = screen.getByRole("textbox", { name: "Markra AI message" });
+    const input = screen.getByRole("textbox", { name: "marktion AI message" });
     expect(input).toHaveValue("Summarize synthetic notes");
 
     fireEvent.change(input, { target: { value: "Summarize updated synthetic notes" } });
@@ -592,7 +592,7 @@ describe("AiAgentPanel", () => {
       onSubmit: submit
     });
 
-    const input = screen.getByRole("textbox", { name: "Markra AI message" });
+    const input = screen.getByRole("textbox", { name: "marktion AI message" });
     const sendButton = screen.getByRole("button", { name: "Send message" });
     const suggestion = screen.getByRole("button", { name: "Summarize this document" });
 
@@ -623,12 +623,12 @@ describe("AiAgentPanel", () => {
       workspaceAvailable: true
     });
 
-    const input = screen.getByRole("textbox", { name: "Markra AI message" });
+    const input = screen.getByRole("textbox", { name: "marktion AI message" });
     const sendButton = screen.getByRole("button", { name: "Send message" });
     const suggestion = screen.getByRole("button", { name: "Summarize this document" });
 
     expect(screen.getByText("Ready when you are")).toBeInTheDocument();
-    expect(input).toHaveAttribute("placeholder", "Ask Markra AI...");
+    expect(input).toHaveAttribute("placeholder", "Ask marktion AI...");
     expect(input).toBeEnabled();
     expect(sendButton).toBeEnabled();
     expect(suggestion).toBeDisabled();
@@ -651,7 +651,7 @@ describe("AiAgentPanel", () => {
       onSubmit: submit
     });
 
-    const input = screen.getByRole("textbox", { name: "Markra AI message" });
+    const input = screen.getByRole("textbox", { name: "marktion AI message" });
     const defaultAllowed = fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
 
     expect(defaultAllowed).toBe(true);
@@ -684,7 +684,7 @@ describe("AiAgentPanel", () => {
 
     render(<Harness />);
 
-    const input = screen.getByRole("textbox", { name: "Markra AI message" });
+    const input = screen.getByRole("textbox", { name: "marktion AI message" });
     fireEvent.compositionStart(input);
     fireEvent.keyDown(input, { key: "Enter", nativeEvent: { isComposing: true, keyCode: 229 } });
     fireEvent.compositionEnd(input);
@@ -703,7 +703,7 @@ describe("AiAgentPanel", () => {
       messages: [initialMessage],
       status: "streaming"
     });
-    const transcript = screen.getByRole("log", { name: "Markra AI" });
+    const transcript = screen.getByRole("log", { name: "marktion AI" });
 
     Object.defineProperty(transcript, "scrollHeight", {
       configurable: true,
@@ -739,7 +739,7 @@ describe("AiAgentPanel", () => {
       messages: [initialMessage],
       status: "streaming"
     });
-    const transcript = screen.getByRole("log", { name: "Markra AI" });
+    const transcript = screen.getByRole("log", { name: "marktion AI" });
 
     Object.defineProperty(transcript, "clientHeight", {
       configurable: true,
@@ -776,7 +776,7 @@ describe("AiAgentPanel", () => {
       providerName: "OpenAI"
     });
 
-    const input = screen.getByRole("textbox", { name: "Markra AI message" });
+    const input = screen.getByRole("textbox", { name: "marktion AI message" });
     const sendButton = screen.getByRole("button", { name: "Send message" });
 
     expect(input).toHaveClass("w-full");
@@ -826,7 +826,7 @@ describe("AiAgentPanel", () => {
       onResizeStart: resizeStart
     });
 
-    const handle = screen.getByRole("separator", { name: "Resize Markra AI" });
+    const handle = screen.getByRole("separator", { name: "Resize marktion AI" });
 
     fireEvent.pointerDown(handle, { clientX: 100, pointerId: 1 });
     fireEvent.pointerMove(window, { clientX: 20 });

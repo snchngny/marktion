@@ -18,7 +18,7 @@ export function QuickLookPreview({ payload }: QuickLookPreviewProps) {
   return (
     <main className="markra-quicklook-document">
       <header className="markra-quicklook-header">
-        <span>Markra Quick Look</span>
+        <span>marktion Quick Look</span>
         <h1>{payload.fileName}</h1>
       </header>
       <MarkdownPreviewDocument

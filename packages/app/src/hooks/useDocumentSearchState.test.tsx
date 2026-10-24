@@ -30,7 +30,7 @@ describe("useDocumentSearchState", () => {
   it("tracks query and case sensitivity while resetting the active match", () => {
     const { result } = renderHook(() => useDocumentSearchState({
       available: true,
-      sourceContent: "Markra markra MARKRA",
+      sourceContent: "marktion markra MARKRA",
       surface: "source"
     }));
 

@@ -575,7 +575,7 @@ describe("useAiAgentSession", () => {
     });
     expect(mockedRunDocumentAiAgent).not.toHaveBeenCalled();
     const editorContextBlock = (promptBlocks as Array<{ text?: string; type?: string }>).find((block) =>
-      block.type === "text" && block.text?.includes("Markra editor context:")
+      block.type === "text" && block.text?.includes("marktion editor context:")
     );
     expect(editorContextBlock?.text).toContain("Current selection snapshot:");
     expect(editorContextBlock?.text).toContain("Selected text:\nselected synthetic text");

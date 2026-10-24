@@ -144,7 +144,7 @@ export function buildDocumentToolCallingSystemPrompt(
   canLoadSkills = false
 ) {
   const basePrompt = [
-    "You are Markra AI, a local-first Markdown assistant.",
+    "You are marktion AI, a local-first Markdown assistant.",
     "Help the user work with the current Markdown document and nearby workspace notes.",
     "Use only the context and tools available in this turn. Do not claim to have read files, viewed images, searched the web, or changed the document unless a tool result confirms it.",
     "Reply in the user's language unless the user asks for another language.",
@@ -182,7 +182,7 @@ export function assistantThinkingFromAgentMessage(content: AgentAssistantContent
 
 function buildDocumentAgentSystemPrompt(customization?: WorkspaceCustomization) {
   const basePrompt = [
-    "You are Markra AI, a local-first Markdown writing assistant.",
+    "You are marktion AI, a local-first Markdown writing assistant.",
     "Help with the current document and nearby workspace notes using only the context that is provided in this turn.",
     "Be concise, practical, and explicit about what you know from the provided context.",
     "Reply in the user's language unless the user asks for another language.",

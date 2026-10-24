@@ -21,7 +21,7 @@ const items: readonly MarkraDocumentLinkItem[] = [
     detail: "docs/plugins.md",
     href: "./docs/plugins.md",
     id: "plugins",
-    keywords: ["extension", "Markra"],
+    keywords: ["extension", "marktion"],
     label: "Plugin authoring",
   },
 ];

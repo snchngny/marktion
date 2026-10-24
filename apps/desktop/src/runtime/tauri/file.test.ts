@@ -208,14 +208,14 @@ describe("native file access", () => {
     expect(mockedInvoke).not.toHaveBeenCalled();
   });
 
-  it("opens a Markra settings JSON file through the native dialog", async () => {
+  it("opens a marktion settings JSON file through the native dialog", async () => {
     mockedOpen.mockResolvedValue("/mock-files/markra-settings.json");
     mockedInvoke.mockResolvedValue({
       path: "/mock-files/markra-settings.json",
       contents: "{\"format\":\"markra-settings\"}"
     });
 
-    await expect(openNativeSettingsFile({ title: "Import Markra settings" })).resolves.toEqual({
+    await expect(openNativeSettingsFile({ title: "Import marktion settings" })).resolves.toEqual({
       path: "/mock-files/markra-settings.json",
       name: "markra-settings.json",
       content: "{\"format\":\"markra-settings\"}"
@@ -224,8 +224,8 @@ describe("native file access", () => {
     expect(mockedOpen).toHaveBeenCalledWith({
       multiple: false,
       fileAccessMode: "scoped",
-      filters: [{ name: "Markra settings", extensions: ["json"] }],
-      title: "Import Markra settings"
+      filters: [{ name: "marktion settings", extensions: ["json"] }],
+      title: "Import marktion settings"
     });
     expect(mockedInvoke).toHaveBeenCalledWith("read_text_file", {
       path: "/mock-files/markra-settings.json"
@@ -1079,7 +1079,7 @@ describe("native file access", () => {
     expect(mockedInvoke).not.toHaveBeenCalled();
   });
 
-  it("saves a Markra settings JSON file through the native save dialog", async () => {
+  it("saves a marktion settings JSON file through the native save dialog", async () => {
     mockedSave.mockResolvedValue("/mock-files/markra-settings.json");
     mockedInvoke.mockResolvedValue(undefined);
 
@@ -1095,7 +1095,7 @@ describe("native file access", () => {
 
     expect(mockedSave).toHaveBeenCalledWith({
       defaultPath: "markra-settings.json",
-      filters: [{ name: "Markra settings", extensions: ["json"] }]
+      filters: [{ name: "marktion settings", extensions: ["json"] }]
     });
     expect(mockedInvoke).toHaveBeenCalledWith("write_text_file", {
       path: "/mock-files/markra-settings.json",

@@ -12,7 +12,7 @@ describe("document search", () => {
   });
 
   it("supports case-sensitive matching", () => {
-    const text = "Markra markra MARKRA";
+    const text = "marktion markra MARKRA";
 
     expect(findSearchRanges(text, "markra")).toEqual([
       { from: 0, to: 6 },

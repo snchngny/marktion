@@ -37,7 +37,7 @@ describe("KeyboardShortcutsSettings", () => {
     expect(screen.queryByRole("heading", { name: "Formatting" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Insert" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sync now shortcut" })).toHaveTextContent("⌘+⌥+R");
-    expect(screen.getByRole("button", { name: "Toggle Markra AI shortcut" })).toHaveTextContent("⌘+⌥+J");
+    expect(screen.getByRole("button", { name: "Toggle marktion AI shortcut" })).toHaveTextContent("⌘+⌥+J");
     expect(screen.getByRole("button", { name: "AI writing command shortcut" })).toHaveTextContent("⌘+⇧+J");
     expect(screen.getByRole("button", { name: "History versions shortcut" })).toHaveTextContent("⌘+⇧+H");
     expect(screen.getByRole("button", { name: "Switch to source mode shortcut" })).toHaveTextContent("⌘+⌥+S");
@@ -401,7 +401,7 @@ describe("KeyboardShortcutsSettings", () => {
 
     expect(screen.getByRole("button", { name: "Bold shortcut" })).toHaveTextContent("Ctrl+B");
     expect(screen.getByRole("button", { name: "Sync now shortcut" })).toHaveTextContent("Ctrl+Alt+R");
-    expect(screen.getByRole("button", { name: "Toggle Markra AI shortcut" })).toHaveTextContent("Ctrl+Alt+J");
+    expect(screen.getByRole("button", { name: "Toggle marktion AI shortcut" })).toHaveTextContent("Ctrl+Alt+J");
     expect(screen.getByRole("button", { name: "AI writing command shortcut" })).toHaveTextContent("Ctrl+Shift+J");
     expect(screen.getByRole("button", { name: "History versions shortcut" })).toHaveTextContent("Ctrl+Shift+H");
     expect(screen.getByRole("button", { name: "Switch to source mode shortcut" })).toHaveTextContent("Ctrl+Alt+S");
@@ -519,7 +519,7 @@ describe("KeyboardShortcutsSettings", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI shortcut" }));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI shortcut" }));
     fireEvent.keyDown(window, {
       key: "j",
       altKey: true,

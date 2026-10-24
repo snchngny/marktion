@@ -38,7 +38,7 @@ describe("formatMermaidError", () => {
 });
 
 describe("renderMermaidToSvg", () => {
-  it("renders safe HTML labels and leaves error presentation to Markra", async () => {
+  it("renders safe HTML labels and leaves error presentation to marktion", async () => {
     await renderMermaidToSvg(["flowchart TD", "  A[Global<br/>Rules] --> B[Project]"].join("\n"), {
       theme: "neutral"
     });

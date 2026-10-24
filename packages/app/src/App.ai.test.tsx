@@ -55,8 +55,8 @@ async function expectVisualMarkdownText(text: string) {
   });
 }
 
-describe("Markra AI workspace", () => {
-  it("opens a right-side Markra AI workspace from the titlebar", async () => {
+describe("marktion AI workspace", () => {
+  it("opens a right-side marktion AI workspace from the titlebar", async () => {
     mockedGetStoredAiSettings.mockResolvedValue({
       defaultModelId: "gpt-5.5",
       defaultProviderId: "openai",
@@ -82,12 +82,12 @@ describe("Markra AI workspace", () => {
     });
     const { container } = renderApp();
 
-    await screen.findByText("Welcome to Markra");
+    await screen.findByText("Welcome to marktion");
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
 
-    expect(screen.getByRole("button", { name: "Toggle Markra AI" })).toHaveAttribute("aria-pressed", "true");
-    const agentPanel = await screen.findByRole("complementary", { name: "Markra AI" });
+    expect(screen.getByRole("button", { name: "Toggle marktion AI" })).toHaveAttribute("aria-pressed", "true");
+    const agentPanel = await screen.findByRole("complementary", { name: "marktion AI" });
     expect(agentPanel).toBeInTheDocument();
     expect(container.querySelector(".native-titlebar")).toHaveClass("z-8");
     expect(agentPanel.closest(".ai-agent-panel-slot")).toHaveClass("z-20");
@@ -98,9 +98,9 @@ describe("Markra AI workspace", () => {
       "minmax(0,1fr) 384px"
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Close Markra AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close marktion AI" }));
 
-    expect(screen.getByRole("button", { name: "Toggle Markra AI" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Toggle marktion AI" })).toHaveAttribute("aria-pressed", "false");
     expect((container.querySelector(".editor-agent-layout") as HTMLElement).style.gridTemplateColumns).toBe(
       "minmax(0,1fr) 0px"
     );
@@ -109,7 +109,7 @@ describe("Markra AI workspace", () => {
   it("keeps the selected editor text visibly held when the right-side AI input is focused", async () => {
     const { container } = renderApp();
 
-    await expectVisualMarkdownText("Welcome to Markra");
+    await expectVisualMarkdownText("Welcome to marktion");
     await settleEditorUpdates();
 
     const view = await visibleEditorView();
@@ -120,10 +120,10 @@ describe("Markra AI workspace", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
 
-    const agentPanel = await screen.findByRole("complementary", { name: "Markra AI" });
-    const input = within(agentPanel).getByRole("textbox", { name: "Markra AI message" });
+    const agentPanel = await screen.findByRole("complementary", { name: "marktion AI" });
+    const input = within(agentPanel).getByRole("textbox", { name: "marktion AI message" });
 
     fireEvent.focus(input);
 
@@ -132,25 +132,25 @@ describe("Markra AI workspace", () => {
     });
   });
 
-  it("toggles the Markra AI panel from the keyboard shortcut", async () => {
+  it("toggles the marktion AI panel from the keyboard shortcut", async () => {
     renderApp();
 
-    await expectVisualMarkdownText("Welcome to Markra");
+    await expectVisualMarkdownText("Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "j", altKey: true, metaKey: true });
 
-    expect(screen.getByRole("button", { name: "Toggle Markra AI" })).toHaveAttribute("aria-pressed", "true");
-    expect(await screen.findByRole("complementary", { name: "Markra AI" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Toggle marktion AI" })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("complementary", { name: "marktion AI" })).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "j", altKey: true, metaKey: true });
 
-    expect(screen.getByRole("button", { name: "Toggle Markra AI" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Toggle marktion AI" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("opens the inline AI command from the keyboard shortcut at the current block", async () => {
     renderApp();
 
-    await expectVisualMarkdownText("Welcome to Markra");
+    await expectVisualMarkdownText("Welcome to marktion");
     await screen.findByRole("textbox", { name: "Markdown document" });
 
     fireEvent.keyDown(window, { key: "j", metaKey: true, shiftKey: true });
@@ -158,7 +158,7 @@ describe("Markra AI workspace", () => {
     expect(await screen.findByRole("textbox", { name: "AI command" })).toBeInTheDocument();
   });
 
-  it("moves structurally complex inline prompts into the Markra AI panel", async () => {
+  it("moves structurally complex inline prompts into the marktion AI panel", async () => {
     mockedGetStoredEditorPreferences.mockResolvedValue({
       aiQuickActionPrompts: defaultAiQuickActionPrompts,
       aiWorkspaceAnimationEnabled: false,
@@ -256,7 +256,7 @@ describe("Markra AI workspace", () => {
 
     renderApp();
 
-    await expectVisualMarkdownText("Welcome to Markra");
+    await expectVisualMarkdownText("Welcome to marktion");
     await screen.findByRole("textbox", { name: "Markdown document" });
 
     fireEvent.keyDown(window, { key: "j", metaKey: true, shiftKey: true });
@@ -269,10 +269,10 @@ describe("Markra AI workspace", () => {
       }
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Use Markra AI" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Use marktion AI" }));
 
-    const agentPanel = await screen.findByRole("complementary", { name: "Markra AI" });
-    expect(within(agentPanel).getByRole("textbox", { name: "Markra AI message" })).toHaveValue(
+    const agentPanel = await screen.findByRole("complementary", { name: "marktion AI" });
+    expect(within(agentPanel).getByRole("textbox", { name: "marktion AI message" })).toHaveValue(
       "Compare these options\n- speed\n- reliability"
     );
     await waitFor(() => expect(screen.queryByRole("textbox", { name: "AI command" })).not.toBeInTheDocument());
@@ -376,7 +376,7 @@ describe("Markra AI workspace", () => {
 
     renderApp();
 
-    await expectVisualMarkdownText("Welcome to Markra");
+    await expectVisualMarkdownText("Welcome to marktion");
     await screen.findByRole("textbox", { name: "Markdown document" });
 
     fireEvent.keyDown(window, { key: "j", metaKey: true, shiftKey: true });
@@ -389,7 +389,7 @@ describe("Markra AI workspace", () => {
       }
     });
 
-    expect(screen.queryByRole("button", { name: "Use Markra AI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use marktion AI" })).not.toBeInTheDocument();
   });
 
   it("allows agent messages when a workspace is open without a markdown document", async () => {
@@ -406,15 +406,15 @@ describe("Markra AI workspace", () => {
     fireEvent.keyDown(window, { key: "o", metaKey: true });
     expect(await screen.findByRole("heading", { name: "vault" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
 
-    const agentPanel = screen.getByRole("complementary", { name: "Markra AI" });
-    const input = within(agentPanel).getByRole("textbox", { name: "Markra AI message" });
+    const agentPanel = screen.getByRole("complementary", { name: "marktion AI" });
+    const input = within(agentPanel).getByRole("textbox", { name: "marktion AI message" });
     const sendButton = within(agentPanel).getByRole("button", { name: "Send message" });
     const suggestion = within(agentPanel).getByRole("button", { name: "Summarize this document" });
 
     expect(within(agentPanel).getByText("Ready when you are")).toBeInTheDocument();
-    expect(input).toHaveAttribute("placeholder", "Ask Markra AI...");
+    expect(input).toHaveAttribute("placeholder", "Ask marktion AI...");
     expect(input).toBeEnabled();
     expect(suggestion).toBeDisabled();
 
@@ -426,7 +426,7 @@ describe("Markra AI workspace", () => {
   it("restores the pending AI suggestion without reopening the command input when an applied suggestion is undone", async () => {
     const { container } = renderApp();
 
-    await expectVisualMarkdownText("Welcome to Markra");
+    await expectVisualMarkdownText("Welcome to marktion");
 
     window.dispatchEvent(
       new CustomEvent(AI_EDITOR_PREVIEW_RESTORE_EVENT, {
@@ -527,7 +527,7 @@ describe("Markra AI workspace", () => {
     });
   });
 
-  it("updates the Markra AI context when selecting a markdown file from a folder workspace", async () => {
+  it("updates the marktion AI context when selecting a markdown file from a folder workspace", async () => {
     const guidePath = "/mock-files/vault/docs/guide.md";
     mockedOpenNativeMarkdownPath.mockResolvedValue({
       kind: "folder",
@@ -550,8 +550,8 @@ describe("Markra AI workspace", () => {
     fireEvent.keyDown(window, { key: "o", metaKey: true });
     expect(await screen.findByRole("heading", { name: "vault" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
-    const agentPanel = screen.getByRole("complementary", { name: "Markra AI" });
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
+    const agentPanel = screen.getByRole("complementary", { name: "marktion AI" });
     fireEvent.click(within(agentPanel).getByRole("button", { name: "Current context" }));
 
     expect(within(agentPanel).getByText("vault")).toBeInTheDocument();
@@ -566,7 +566,7 @@ describe("Markra AI workspace", () => {
     expect(within(agentPanel).queryByText("vault")).not.toBeInTheDocument();
   });
 
-  it("selects the current file's existing Markra AI session when changing files inside a folder workspace", async () => {
+  it("selects the current file's existing marktion AI session when changing files inside a folder workspace", async () => {
     const guidePath = "/mock-files/vault/docs/guide.md";
     mockedOpenNativeMarkdownPath.mockResolvedValue({
       kind: "folder",
@@ -603,8 +603,8 @@ describe("Markra AI workspace", () => {
     fireEvent.keyDown(window, { key: "o", metaKey: true });
     expect(await screen.findByRole("heading", { name: "vault" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
-    const agentPanel = screen.getByRole("complementary", { name: "Markra AI" });
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
+    const agentPanel = screen.getByRole("complementary", { name: "marktion AI" });
     fireEvent.click(within(agentPanel).getByRole("button", { name: "Current context" }));
 
     fireEvent.click(await screen.findByRole("button", { name: "docs" }));
@@ -684,8 +684,8 @@ describe("Markra AI workspace", () => {
 
     renderApp();
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
-    const agentPanel = screen.getByRole("complementary", { name: "Markra AI" });
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
+    const agentPanel = screen.getByRole("complementary", { name: "marktion AI" });
 
     fireEvent.click(within(agentPanel).getByRole("button", { name: "Sessions" }));
     fireEvent.click(await screen.findByRole("menuitemradio", { name: /DeepSeek session/ }));
@@ -702,7 +702,7 @@ describe("Markra AI workspace", () => {
     expect(within(agentPanel).getByRole("button", { name: "Web search" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("keeps remembered mode toggles when creating a new Markra AI session", async () => {
+  it("keeps remembered mode toggles when creating a new marktion AI session", async () => {
     const initializedSessions = new Set(["session-app"]);
     let finishInitialize: (() => unknown) | undefined;
 
@@ -755,8 +755,8 @@ describe("Markra AI workspace", () => {
 
     renderApp();
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
-    const agentPanel = screen.getByRole("complementary", { name: "Markra AI" });
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
+    const agentPanel = screen.getByRole("complementary", { name: "marktion AI" });
     const deepThinking = within(agentPanel).getByRole("button", { name: "Deep thinking" });
     const webSearch = within(agentPanel).getByRole("button", { name: "Web search" });
 
@@ -786,7 +786,7 @@ describe("Markra AI workspace", () => {
     expect(within(agentPanel).getByRole("button", { name: "Web search" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("creates a separate Markra AI session when selecting a file without existing session history", async () => {
+  it("creates a separate marktion AI session when selecting a file without existing session history", async () => {
     const guidePath = "/mock-files/vault/docs/guide.md";
     mockedCreateAiAgentSessionId
       .mockReturnValueOnce("session-startup")
@@ -814,8 +814,8 @@ describe("Markra AI workspace", () => {
     fireEvent.keyDown(window, { key: "o", metaKey: true });
     expect(await screen.findByRole("heading", { name: "vault" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
-    const agentPanel = screen.getByRole("complementary", { name: "Markra AI" });
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
+    const agentPanel = screen.getByRole("complementary", { name: "marktion AI" });
     fireEvent.click(within(agentPanel).getByRole("button", { name: "Current context" }));
 
     fireEvent.click(await screen.findByRole("button", { name: "docs" }));

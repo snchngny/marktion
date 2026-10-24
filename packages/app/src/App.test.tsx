@@ -541,7 +541,7 @@ function findEditorTextPosition(view: EditorView, text: string, offset = 0) {
   return result + offset;
 }
 
-describe("Markra workspace", () => {
+describe("marktion workspace", () => {
   it("marks macOS 27 windows for the WebKit scrolling workaround", async () => {
     mockedResolveDesktopPlatform.mockReturnValue("macos");
     mockedResolveDesktopOsVersion.mockReturnValue("27.0");
@@ -608,7 +608,7 @@ describe("Markra workspace", () => {
 
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     const view = getVisibleCodeMirrorView(container);
     act(() => {
       view.dispatch({ selection: EditorSelection.cursor(view.state.doc.length) });
@@ -656,7 +656,7 @@ describe("Markra workspace", () => {
 
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     const view = getVisibleCodeMirrorView(container);
     const markdownBeforePaste = view.state.doc.toString();
     fireEvent.keyDown(window, { key: "f", metaKey: true });
@@ -677,7 +677,7 @@ describe("Markra workspace", () => {
   it("leaves the default plain text paste shortcut to the browser runtime", async () => {
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     const view = getVisibleCodeMirrorView(container);
     const markdownBeforePaste = view.state.doc.toString();
 
@@ -715,7 +715,7 @@ describe("Markra workspace", () => {
 
     expect(screen.getByRole("heading", { name: "Untitled.md" })).toBeInTheDocument();
     expect(screen.getByLabelText("Window drag region")).toBeInTheDocument();
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     expect(screen.getByRole("button", { name: "Open Markdown or Folder" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save Markdown" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Switch to dark theme" })).toBeInTheDocument();
@@ -789,7 +789,7 @@ describe("Markra workspace", () => {
   it("does not open local import pickers while source mode is active", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await selectEditorViewMode("Source code");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalled());
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls.at(-1)?.[0] as NativeMenuHandlers;
@@ -1031,7 +1031,7 @@ describe("Markra workspace", () => {
 
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalled());
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls.at(-1)?.[0] as NativeMenuHandlers & {
       importLocalFiles?: () => unknown | Promise<unknown>;
@@ -1079,7 +1079,7 @@ describe("Markra workspace", () => {
 
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalled());
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls.at(-1)?.[0] as NativeMenuHandlers;
 
@@ -1120,7 +1120,7 @@ describe("Markra workspace", () => {
 
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalled());
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls.at(-1)?.[0] as NativeMenuHandlers;
     await act(async () => {
@@ -1226,7 +1226,7 @@ describe("Markra workspace", () => {
   it("replaces the document word count with the selected word count in the quiet status line", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Source code");
 
@@ -1238,7 +1238,7 @@ describe("Markra workspace", () => {
       view.dispatch({
         selection: {
           anchor: start,
-          head: start + "Welcome to Markra".length
+          head: start + "Welcome to marktion".length
         }
       });
     });
@@ -1250,7 +1250,7 @@ describe("Markra workspace", () => {
   it("reserves a separate row for document status instead of overlaying the writing surface", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     const visualStatus = container.querySelector(".quiet-status");
     const visualPaper = container.querySelector(".markdown-paper");
     const visualScroll = visualPaper?.parentElement;
@@ -1330,14 +1330,14 @@ describe("Markra workspace", () => {
 
     const { unmount } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
-    expect(screen.queryByRole("button", { name: "Toggle Markra AI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Toggle marktion AI" })).not.toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "j", altKey: true, metaKey: true });
     fireEvent.keyDown(window, { key: "j", metaKey: true, shiftKey: true });
 
-    expect(screen.queryByRole("complementary", { name: "Markra AI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "marktion AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "AI command" })).not.toBeInTheDocument();
 
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalledTimes(1));
@@ -1362,7 +1362,7 @@ describe("Markra workspace", () => {
     expect(mockedSaveNativeHtmlFile).not.toHaveBeenCalled();
     expect(mockedSaveNativePandocFile).not.toHaveBeenCalled();
     expect(mockedSaveNativePdfFile).not.toHaveBeenCalled();
-    expect(screen.queryByRole("complementary", { name: "Markra AI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "marktion AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "AI command" })).not.toBeInTheDocument();
 
     unmount();
@@ -1383,7 +1383,7 @@ describe("Markra workspace", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
 
-    expect(screen.queryByRole("button", { name: "Toggle Markra AI shortcut" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Toggle marktion AI shortcut" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "AI writing command shortcut" })).not.toBeInTheDocument();
   });
 
@@ -1404,7 +1404,7 @@ describe("Markra workspace", () => {
 
     const { unmount } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalledTimes(1));
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls[0]?.[0] as NativeMenuHandlers;
 
@@ -1599,9 +1599,9 @@ describe("Markra workspace", () => {
     }));
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
-    const aiButton = screen.getByRole("button", { name: "Toggle Markra AI" });
+    const aiButton = screen.getByRole("button", { name: "Toggle marktion AI" });
     mockTitlebarActionRects(["aiAgent", "viewMode", "sourceMode", "save", "theme"]);
 
     fireEvent.mouseDown(aiButton, { button: 0, clientX: 10, clientY: 10 });
@@ -1763,7 +1763,7 @@ describe("Markra workspace", () => {
   it("opens settings from the lower-left settings launcher", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
 
@@ -2016,8 +2016,8 @@ describe("Markra workspace", () => {
 
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
-    expect(screen.queryByRole("button", { name: "Toggle Markra AI" })).not.toBeInTheDocument();
+    await expectVisibleMarkdownText("Welcome to marktion");
+    expect(screen.queryByRole("button", { name: "Toggle marktion AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "View mode: Custom" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Editor view mode: Preview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save Markdown" })).not.toBeInTheDocument();
@@ -2242,7 +2242,7 @@ describe("Markra workspace", () => {
     expect(screen.getByRole("button", { name: "Toggle file list" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryByRole("complementary", { name: "Markdown file tree" })).not.toBeInTheDocument();
     expect(screen.queryByText("No folder")).not.toBeInTheDocument();
-    expect(screen.queryByText("Welcome to Markra")).not.toBeInTheDocument();
+    expect(screen.queryByText("Welcome to marktion")).not.toBeInTheDocument();
     expect(mockedConsumeWelcomeDocumentState).not.toHaveBeenCalled();
   });
 
@@ -2674,8 +2674,8 @@ describe("Markra workspace", () => {
     settingsGroups.forEach((group) => expect(group).not.toHaveClass("border-y"));
     expect(settingsGroups[0]).not.toHaveClass("divide-y");
     expect(settingsGroups.some((group) => group.classList.contains("divide-y"))).toBe(true);
-    expect(screen.getByText(`Markra ${desktopPackage.version}`)).toBeInTheDocument();
-    expect(screen.getByText(`Markra v${desktopPackage.version}`)).toBeInTheDocument();
+    expect(screen.getByText(`marktion ${desktopPackage.version}`)).toBeInTheDocument();
+    expect(screen.getByText(`marktion v${desktopPackage.version}`)).toBeInTheDocument();
     const categoryButtons = Array.from(container.querySelectorAll(".settings-sidebar nav button"));
     expect(categoryButtons.map((button) => button.textContent)).toEqual([
       "General",
@@ -2926,7 +2926,7 @@ describe("Markra workspace", () => {
     const toolbarGroup = await screen.findByRole("group", { name: "Top-right buttons" });
 
     expect(within(toolbarGroup).getAllByRole("button").map((button) => button.getAttribute("aria-label"))).toEqual([
-      "Toggle Markra AI",
+      "Toggle marktion AI",
       "View mode",
       "Editor view mode",
       "Save Markdown",
@@ -2950,7 +2950,7 @@ describe("Markra workspace", () => {
     expect(within(toolbarGroup).getAllByRole("button").map((button) => button.getAttribute("aria-label"))).toEqual([
       "Editor view mode",
       "Save Markdown",
-      "Toggle Markra AI",
+      "Toggle marktion AI",
       "View mode",
       "Switch to dark theme",
       "Reset top-right buttons"
@@ -2972,7 +2972,7 @@ describe("Markra workspace", () => {
     expect(settingsChrome).toHaveClass("fixed", "top-0", "h-10", "bg-(--bg-chrome)");
     expect(settingsChrome).not.toHaveClass("border-b");
     expect(settingsChrome).toHaveAttribute("data-tauri-drag-region");
-    expect(within(settingsChrome).getByText("Markra")).toBeInTheDocument();
+    expect(within(settingsChrome).getByText("marktion")).toBeInTheDocument();
     expect(within(settingsChrome).getByText("Settings")).toBeInTheDocument();
     expect(within(settingsChrome).getByRole("button", { name: "Minimize window" })).toBeInTheDocument();
     expect(within(settingsChrome).getByRole("button", { name: "Maximize or restore window" })).toBeInTheDocument();
@@ -2985,13 +2985,13 @@ describe("Markra workspace", () => {
     expect(container.querySelector(".settings-sidebar-title")).toBeInTheDocument();
   });
 
-  it("stores the preference for closing inline AI when the Markra AI panel opens", async () => {
+  it("stores the preference for closing inline AI when the marktion AI panel opens", async () => {
     window.history.pushState({}, "", "/?settings=1");
 
     renderApp();
 
     fireEvent.click(await screen.findByRole("button", { name: "AI" }));
-    const closeInlineAiSwitch = screen.getByRole("switch", { name: "Close inline AI when opening Markra AI" });
+    const closeInlineAiSwitch = screen.getByRole("switch", { name: "Close inline AI when opening marktion AI" });
 
     expect(closeInlineAiSwitch).toHaveAttribute("aria-checked", "false");
 
@@ -3298,14 +3298,14 @@ describe("Markra workspace", () => {
 
     renderApp();
 
-    await waitFor(() => expect(document.querySelector(".app-toast")).toHaveTextContent("Markra caught an error."));
+    await waitFor(() => expect(document.querySelector(".app-toast")).toHaveTextContent("marktion caught an error."));
     const notice = document.querySelector(".app-toast");
     expect(notice).toHaveClass("app-toast-notice");
     expect(notice).toHaveClass("w-[min(23rem,calc(100vw-1.5rem))]");
     expect(notice).toHaveClass("shadow-[0_2px_6px_rgba(15,23,42,0.08)]");
     expect(notice).not.toHaveClass("app-toast-centered");
     expect(notice).not.toHaveClass("left-1/2", "-translate-x-1/2");
-    expect(screen.queryByRole("heading", { name: "Markra needs to reload" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "marktion needs to reload" })).not.toBeInTheDocument();
 
     const submitIssueButton = screen.getByRole("button", { name: "Submit issue" });
     expect(submitIssueButton).toHaveClass("bg-(--accent)", "text-(--bg-primary)");
@@ -3316,9 +3316,9 @@ describe("Markra workspace", () => {
     await waitFor(() => expect(mockedOpenNativeExternalUrl).toHaveBeenCalledTimes(1));
     const issueUrl = new URL(mockedOpenNativeExternalUrl.mock.calls[0][0]);
 
-    expect(issueUrl.pathname).toBe("/markrahq/markra/issues/new");
+    expect(issueUrl.pathname).toBe("/snchngny/marktion/issues/new");
     expect(issueUrl.searchParams.get("title")).toBe("Runtime error report");
-    expect(issueUrl.searchParams.get("body")).toContain("## Markra Crash Report");
+    expect(issueUrl.searchParams.get("body")).toContain("## marktion Crash Report");
     expect(issueUrl.searchParams.get("body")).toContain("- Error message: Mock runtime error preview");
   });
 
@@ -3350,7 +3350,7 @@ describe("Markra workspace", () => {
     fireEvent.click(checkUpdatesButton);
 
     await waitFor(() => expect(mockedCheckNativeAppUpdate).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(document.querySelector(".app-toast")).toHaveTextContent("Checking for Markra updates..."));
+    await waitFor(() => expect(document.querySelector(".app-toast")).toHaveTextContent("Checking for marktion updates..."));
     expect(document.querySelector(".app-toast [data-icon]")).toHaveClass(
       "relative",
       "inline-flex",
@@ -3365,7 +3365,7 @@ describe("Markra workspace", () => {
       resolveUpdateCheck(null);
     });
 
-    await waitFor(() => expect(document.querySelector(".app-toast")).toHaveTextContent("Markra is up to date."));
+    await waitFor(() => expect(document.querySelector(".app-toast")).toHaveTextContent("marktion is up to date."));
   });
 
   it("stores the automatic update preference from the settings window", async () => {
@@ -3400,7 +3400,7 @@ describe("Markra workspace", () => {
     });
 
     expect(mockedCheckNativeAppUpdate).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(document.querySelector(".app-toast")).toHaveTextContent("Markra is up to date."));
+    await waitFor(() => expect(document.querySelector(".app-toast")).toHaveTextContent("marktion is up to date."));
   });
 
   it("waits for stored automatic update preference before startup update checks", async () => {
@@ -3476,7 +3476,7 @@ describe("Markra workspace", () => {
 
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle file list" }));
 
@@ -3552,7 +3552,7 @@ describe("Markra workspace", () => {
   it("resizes the editor writing column and persists the custom width", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     expect(screen.getByLabelText("Markdown editor")).toHaveStyle({
       maxWidth: "860px"
     });
@@ -3601,7 +3601,7 @@ describe("Markra workspace", () => {
     try {
       renderApp();
 
-      await expectVisibleMarkdownText("Welcome to Markra");
+      await expectVisibleMarkdownText("Welcome to marktion");
       expect(screen.getByLabelText("Markdown editor")).toHaveStyle({
         maxWidth: "860px"
       });
@@ -3621,7 +3621,7 @@ describe("Markra workspace", () => {
     try {
       renderApp();
 
-      await expectVisibleMarkdownText("Welcome to Markra");
+      await expectVisibleMarkdownText("Welcome to marktion");
       expect(screen.getByLabelText("Markdown editor")).toHaveStyle({
         maxWidth: "860px"
       });
@@ -3637,7 +3637,7 @@ describe("Markra workspace", () => {
     try {
       renderApp();
 
-      await expectVisibleMarkdownText("Welcome to Markra");
+      await expectVisibleMarkdownText("Welcome to marktion");
       const resizeHandle = await screen.findByRole("separator", { name: "Resize editor width" });
 
       fireEvent.pointerDown(resizeHandle, { clientX: 860, pointerId: 1 });
@@ -3661,15 +3661,15 @@ describe("Markra workspace", () => {
     const { container } = renderApp();
 
     try {
-      await expectVisibleMarkdownText("Welcome to Markra");
+      await expectVisibleMarkdownText("Welcome to marktion");
       expect(screen.getByLabelText("Markdown editor")).toHaveStyle({
         maxWidth: "860px"
       });
       expect(screen.getByRole("separator", { name: "Resize editor width" })).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
+      fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
 
-      expect(await screen.findByRole("complementary", { name: "Markra AI" })).toBeInTheDocument();
+      expect(await screen.findByRole("complementary", { name: "marktion AI" })).toBeInTheDocument();
       expect(screen.queryByRole("separator", { name: "Resize editor width" })).not.toBeInTheDocument();
       expect(container.querySelector(".editor-width-resizer-indicator")).not.toBeInTheDocument();
     } finally {
@@ -3682,11 +3682,11 @@ describe("Markra workspace", () => {
     const { container } = renderApp();
 
     try {
-      await expectVisibleMarkdownText("Welcome to Markra");
+      await expectVisibleMarkdownText("Welcome to marktion");
 
-      fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
+      fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
 
-      expect(await screen.findByRole("complementary", { name: "Markra AI" })).toBeInTheDocument();
+      expect(await screen.findByRole("complementary", { name: "marktion AI" })).toBeInTheDocument();
       expect(screen.getByRole("separator", { name: "Resize editor width" })).toBeInTheDocument();
       expect(container.querySelector(".editor-width-resizer-shell")).toHaveClass("w-8");
       expect(container.querySelector(".editor-width-resizer-indicator")).toHaveClass("opacity-0");
@@ -6508,14 +6508,14 @@ describe("Markra workspace", () => {
     mockedConsumeWelcomeDocumentState.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     const firstLaunch = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     firstLaunch.unmount();
     renderApp();
 
     expect(screen.getByRole("heading", { name: "Untitled.md" })).toBeInTheDocument();
     expect(await screen.findByLabelText("Markdown editor")).toHaveTextContent(/^$/);
-    expect(screen.queryByText("Welcome to Markra")).not.toBeInTheDocument();
+    expect(screen.queryByText("Welcome to marktion")).not.toBeInTheDocument();
     expect(mockedConsumeWelcomeDocumentState).toHaveBeenCalledTimes(2);
   });
 
@@ -6526,7 +6526,7 @@ describe("Markra workspace", () => {
 
     expect(screen.getByRole("heading", { name: "Untitled.md" })).toBeInTheDocument();
     expect(await screen.findByLabelText("Markdown editor")).toHaveTextContent(/^$/);
-    expect(screen.queryByText("Welcome to Markra")).not.toBeInTheDocument();
+    expect(screen.queryByText("Welcome to marktion")).not.toBeInTheDocument();
     expect(mockedConsumeWelcomeDocumentState).not.toHaveBeenCalled();
   });
 
@@ -6566,7 +6566,7 @@ describe("Markra workspace", () => {
     expect(mockedConsumeWelcomeDocumentState).not.toHaveBeenCalled();
   });
 
-  it("loads a markdown file when the operating system opens Markra with a file path", async () => {
+  it("loads a markdown file when the operating system opens marktion with a file path", async () => {
     mockedTakeNativeOpenedMarkdownPaths.mockResolvedValue([mockDroppedPath]);
     mockedReadNativeMarkdownFile.mockResolvedValue({
       content: "# Opened from OS\n\nDouble-clicked from Finder or Explorer.",
@@ -6582,7 +6582,7 @@ describe("Markra workspace", () => {
     expect(mockedConsumeWelcomeDocumentState).not.toHaveBeenCalled();
   });
 
-  it("opens a markdown file when the operating system sends a file-open event while Markra is running", async () => {
+  it("opens a markdown file when the operating system sends a file-open event while marktion is running", async () => {
     let onOpenedPaths: ((paths: string[]) => unknown) | null = null;
     mockedConsumeWelcomeDocumentState.mockResolvedValue(false);
     mockedListenNativeOpenedMarkdownPaths.mockImplementation(async (listener) => {
@@ -6590,7 +6590,7 @@ describe("Markra workspace", () => {
       return () => {};
     });
     mockedReadNativeMarkdownFile.mockResolvedValue({
-      content: "# Runtime file\n\nOpened while Markra was already running.",
+      content: "# Runtime file\n\nOpened while marktion was already running.",
       name: "dropped.md",
       path: mockDroppedPath
     });
@@ -6628,7 +6628,7 @@ describe("Markra workspace", () => {
       }
 
       return {
-        content: "# Runtime file\n\nOpened while Markra was already running.",
+        content: "# Runtime file\n\nOpened while marktion was already running.",
         name: "dropped.md",
         path: mockDroppedPath
       };
@@ -6770,7 +6770,7 @@ describe("Markra workspace", () => {
 
   it("opens a dropped markdown file in a new window when the current editor has content", async () => {
     renderApp();
-    await screen.findByRole("heading", { name: "Welcome to Markra" });
+    await screen.findByRole("heading", { name: "Welcome to marktion" });
     await waitFor(() => expect(mockedInstallNativeMarkdownFileDrop).toHaveBeenCalled());
     const handleDrop = mockedInstallNativeMarkdownFileDrop.mock.calls.at(-1)?.[0];
 
@@ -6780,7 +6780,7 @@ describe("Markra workspace", () => {
 
     expect(mockedOpenNativeMarkdownFileInNewWindow).toHaveBeenCalledWith(mockDroppedPath);
     expect(mockedReadNativeMarkdownFile).not.toHaveBeenCalledWith(mockDroppedPath);
-    expect(screen.getByRole("heading", { name: "Welcome to Markra" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Welcome to marktion" })).toBeInTheDocument();
   });
 
   it("opens a dropped markdown folder into the current empty editor file tree", async () => {
@@ -6816,7 +6816,7 @@ describe("Markra workspace", () => {
 
   it("opens a dropped markdown folder in a new window when the current editor has content", async () => {
     renderApp();
-    await screen.findByRole("heading", { name: "Welcome to Markra" });
+    await screen.findByRole("heading", { name: "Welcome to marktion" });
     await waitFor(() => expect(mockedInstallNativeMarkdownFileDrop).toHaveBeenCalled());
     const handleDrop = mockedInstallNativeMarkdownFileDrop.mock.calls.at(-1)?.[0];
 
@@ -6827,7 +6827,7 @@ describe("Markra workspace", () => {
     expect(mockedOpenNativeMarkdownFolderInNewWindow).toHaveBeenCalledWith(mockFolderPath);
     expect(mockedListNativeMarkdownFilesForPath).not.toHaveBeenCalledWith(mockFolderPath, defaultFileTreeListOptions);
     expect(screen.queryByRole("complementary", { name: "Markdown file tree" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Welcome to Markra" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Welcome to marktion" })).toBeInTheDocument();
   });
 
   it("saves an untitled document with the native save dialog shortcut", async () => {
@@ -6837,7 +6837,7 @@ describe("Markra workspace", () => {
     });
 
     renderApp();
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "s", metaKey: true });
 
@@ -6927,13 +6927,13 @@ describe("Markra workspace", () => {
   it("switches between the visual editor and markdown source mode", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Source code");
 
     const sourceEditor = await screen.findByRole("textbox", { name: "Markdown source" });
-    expect(readMarkdownSource(sourceEditor)).toContain("# Welcome to Markra");
-    expect(screen.queryByRole("heading", { name: "Welcome to Markra" })).not.toBeInTheDocument();
+    expect(readMarkdownSource(sourceEditor)).toContain("# Welcome to marktion");
+    expect(screen.queryByRole("heading", { name: "Welcome to marktion" })).not.toBeInTheDocument();
 
     replaceMarkdownSource(sourceEditor, "# Source edit\n\nUpdated from source mode.");
 
@@ -6997,7 +6997,7 @@ describe("Markra workspace", () => {
   it("commits pending visual IME content before source mode mounts", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     const visualEditor = screen.getByRole("textbox", { name: "Markdown document" });
     const visualView = getMarkdownSourceView(visualEditor);
     const pendingCompositionTasks: VoidFunction[] = [];
@@ -7156,7 +7156,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     expect(container.querySelector(".cm-lineNumbers")).not.toBeInTheDocument();
 
     await selectEditorViewMode("Source code");
@@ -7164,7 +7164,7 @@ describe("Markra workspace", () => {
 
     await selectEditorViewMode("Preview + Source");
     expect(container.querySelectorAll(".cm-lineNumbers")).toHaveLength(1);
-    expect(screen.getByRole("heading", { name: "Welcome to Markra" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Welcome to marktion" })).toBeInTheDocument();
   });
 
   it("enables typewriter mode in visual and source editors", async () => {
@@ -7173,7 +7173,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     expect(getVisibleCodeMirrorView(container).dom).toHaveAttribute(
       "data-typewriter-mode",
       "true"
@@ -7191,7 +7191,7 @@ describe("Markra workspace", () => {
   it("highlights the restored cursor line after switching editor views", async () => {
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     const visualView = getVisibleCodeMirrorView(container);
     const cursor = visualView.state.doc.toString().indexOf("Welcome");
     act(() => {
@@ -7225,7 +7225,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await selectEditorViewMode("Source code");
 
     expect(container.querySelector(".cm-markra-location-cue")).not.toBeInTheDocument();
@@ -7290,7 +7290,7 @@ describe("Markra workspace", () => {
   it("toggles and persists typewriter mode from the keyboard shortcut", async () => {
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     expect(getVisibleCodeMirrorView(container).dom).not.toHaveAttribute("data-typewriter-mode");
 
     fireEvent.keyDown(window, { key: "Y", metaKey: true, shiftKey: true });
@@ -7315,7 +7315,7 @@ describe("Markra workspace", () => {
     );
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "Y", metaKey: true, shiftKey: true });
 
@@ -7336,7 +7336,7 @@ describe("Markra workspace", () => {
   it("toggles and persists Vim mode from the keyboard shortcut", async () => {
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     expect(getVisibleCodeMirrorView(container).scrollDOM).not.toHaveClass("cm-vimMode");
 
     fireEvent.keyDown(window, { altKey: true, code: "KeyV", key: "v", metaKey: true });
@@ -7355,7 +7355,7 @@ describe("Markra workspace", () => {
   it("keeps raw source punctuation unchanged while editing in source mode", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Source code");
     const sourceEditor = await screen.findByRole("textbox", { name: "Markdown source" });
@@ -7369,7 +7369,7 @@ describe("Markra workspace", () => {
   it("keeps source mode typing undoable and redoable before switching back to visual mode", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Source code");
     const sourceEditor = await screen.findByRole("textbox", { name: "Markdown source" });
@@ -7392,7 +7392,7 @@ describe("Markra workspace", () => {
   it("keeps visual undo history after switching to source mode and back", async () => {
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalledTimes(1));
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls[0]?.[0] as NativeMenuHandlers;
 
@@ -7440,7 +7440,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
     const visualView = getVisibleCodeMirrorView(container);
 
@@ -7453,7 +7453,7 @@ describe("Markra workspace", () => {
 
     await waitFor(() => {
       expect(container.querySelector(".cm-editor .markra-ai-selection-hold")).toHaveTextContent(
-        "Welcome to Markra"
+        "Welcome to marktion"
       );
     });
   });
@@ -7465,7 +7465,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
     const visualView = getVisibleCodeMirrorView(container);
     const from = findEditorTextPosition(visualView, "Welcome");
@@ -7482,7 +7482,7 @@ describe("Markra workspace", () => {
     fireEvent.click(bold);
 
     await waitFor(() => {
-      expect(visualView.state.doc.toString()).toContain("**Welcome** to Markra");
+      expect(visualView.state.doc.toString()).toContain("**Welcome** to marktion");
     });
     expect(visualView.state.sliceDoc(
       visualView.state.selection.main.from,
@@ -7491,8 +7491,8 @@ describe("Markra workspace", () => {
   });
 
   it.each([
-    { button: "Italic", formatted: "*Welcome* to Markra" },
-    { button: "Strikethrough", formatted: "~~Welcome~~ to Markra" }
+    { button: "Italic", formatted: "*Welcome* to marktion" },
+    { button: "Strikethrough", formatted: "~~Welcome~~ to marktion" }
   ])("applies $button from the selection toolbar", async ({ button, formatted }) => {
     mockedGetStoredEditorPreferences.mockResolvedValue(createStoredEditorPreferences({
       showAiQuickInputOnSelection: false,
@@ -7500,7 +7500,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
     const visualView = getVisibleCodeMirrorView(container);
     const from = findEditorTextPosition(visualView, "Welcome");
@@ -7537,7 +7537,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
     const visualView = getVisibleCodeMirrorView(container);
 
@@ -7550,7 +7550,7 @@ describe("Markra workspace", () => {
 
     await waitFor(() => {
       expect(container.querySelector(".cm-editor .markra-ai-selection-hold")).toHaveTextContent(
-        "Welcome to Markra"
+        "Welcome to marktion"
       );
     });
   });
@@ -7575,7 +7575,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
     const visualView = getVisibleCodeMirrorView(container);
 
@@ -7588,7 +7588,7 @@ describe("Markra workspace", () => {
 
     await waitFor(() => {
       expect(container.querySelector(".cm-editor .markra-ai-selection-hold")).toHaveTextContent(
-        "Welcome to Markra"
+        "Welcome to marktion"
       );
     });
   });
@@ -7609,7 +7609,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
     const visualView = getVisibleCodeMirrorView(container);
     const from = findEditorTextPosition(visualView, "Welcome");
@@ -7641,7 +7641,7 @@ describe("Markra workspace", () => {
     }));
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
     const visualView = getVisibleCodeMirrorView(container);
 
@@ -7659,7 +7659,7 @@ describe("Markra workspace", () => {
   it("inserts the default menu image and renders its preview after leaving the source", async () => {
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalledTimes(1));
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls[0]?.[0] as NativeMenuHandlers;
 
@@ -7695,7 +7695,7 @@ describe("Markra workspace", () => {
   it("keeps source edits undoable after switching back to visual mode", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalledTimes(1));
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls[0]?.[0] as NativeMenuHandlers;
 
@@ -7723,7 +7723,7 @@ describe("Markra workspace", () => {
       menuHandlers.editUndo?.();
     });
     await expectVisibleMarkdownWithout("Source history");
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     expect(getVisibleCodeMirrorView(container)).toBe(visualView);
     expect(redoDepth(visualView.state)).toBeGreaterThan(0);
 
@@ -7740,7 +7740,7 @@ describe("Markra workspace", () => {
   it("keeps callout body line breaks when switching from source to visual mode", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Source code");
 
@@ -7763,7 +7763,7 @@ describe("Markra workspace", () => {
   it("keeps explicit empty callout body lines when switching source and visual modes", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Source code");
 
@@ -7792,7 +7792,7 @@ describe("Markra workspace", () => {
   it("keeps trailing empty callout body lines after content when switching source and visual modes", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Source code");
 
@@ -7937,7 +7937,7 @@ describe("Markra workspace", () => {
   it("keeps source and visual editors synchronized in split mode", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await settleEditorUpdates();
 
     await selectEditorViewMode("Preview + Source");
@@ -7974,7 +7974,7 @@ describe("Markra workspace", () => {
   it("keeps a visual update that arrives after source pane focus in split mode", async () => {
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
 
     await selectEditorViewMode("Preview + Source");
@@ -8005,7 +8005,7 @@ describe("Markra workspace", () => {
   it("keeps a synced visual edit in source after focusing the source pane in split mode", async () => {
     const { container } = renderApp();
 
-    await expectVisibleCodeMirrorText(container, "Welcome to Markra");
+    await expectVisibleCodeMirrorText(container, "Welcome to marktion");
     await settleEditorUpdates();
 
     await selectEditorViewMode("Preview + Source");
@@ -8042,7 +8042,7 @@ describe("Markra workspace", () => {
   it("places the visual pane before the source pane in split mode", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Preview + Source");
 
@@ -8057,7 +8057,7 @@ describe("Markra workspace", () => {
   it("resizes split panes from the center divider and persists the ratio", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Preview + Source");
 
@@ -8097,7 +8097,7 @@ describe("Markra workspace", () => {
   it("links source and visual pane scrolling in split mode", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     await selectEditorViewMode("Preview + Source");
     const sourceEditor = await screen.findByRole("textbox", { name: "Markdown source" });
@@ -8129,7 +8129,7 @@ describe("Markra workspace", () => {
   it("recalibrates split pane scrolling after target layout changes", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await settleEditorUpdates();
 
     await selectEditorViewMode("Preview + Source");
@@ -8254,12 +8254,12 @@ describe("Markra workspace", () => {
   it("switches source mode from the keyboard shortcut", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "s", altKey: true, metaKey: true });
 
     const sourceEditor = await screen.findByRole("textbox", { name: "Markdown source" });
-    expect(readMarkdownSource(sourceEditor)).toContain("# Welcome to Markra");
+    expect(readMarkdownSource(sourceEditor)).toContain("# Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "s", altKey: true, metaKey: true });
 
@@ -8269,7 +8269,7 @@ describe("Markra workspace", () => {
   it("opens document search from the keyboard shortcut", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     expect(fireEvent.keyDown(window, { key: "f", metaKey: true })).toBe(false);
 
@@ -8289,7 +8289,7 @@ describe("Markra workspace", () => {
 
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     expect(fireEvent.keyDown(window, { key: "h", ctrlKey: true })).toBe(false);
 
@@ -8301,7 +8301,7 @@ describe("Markra workspace", () => {
   it("opens document replace from the native macOS Cmd+Option+F keyboard shortcut", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     expect(fireEvent.keyDown(window, { altKey: true, code: "KeyF", key: "ƒ", metaKey: true })).toBe(false);
 
@@ -8618,7 +8618,7 @@ describe("Markra workspace", () => {
   it("does not open the AI command when visual document search focuses a match", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "f", metaKey: true });
     fireEvent.change(screen.getByRole("searchbox", { name: "Find in document" }), {
@@ -8634,7 +8634,7 @@ describe("Markra workspace", () => {
   it("does not scroll the visual editor while typing a document search query", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     const view = getVisibleCodeMirrorView(container);
     const selectionBeforeSearch = view.state.selection.main.from;
 
@@ -8711,7 +8711,7 @@ describe("Markra workspace", () => {
   it("replaces the current source-mode document search match", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "s", altKey: true, metaKey: true });
     const sourceEditor = await screen.findByRole("textbox", { name: "Markdown source" });
@@ -8730,13 +8730,13 @@ describe("Markra workspace", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Replace" }));
 
-    expect(readMarkdownSource(sourceEditor)).toContain("# Hello to Markra");
+    expect(readMarkdownSource(sourceEditor)).toContain("# Hello to marktion");
   });
 
   it("toggles read-only mode from the keyboard shortcut and marks the status area", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "l", altKey: true, metaKey: true });
 
@@ -8754,7 +8754,7 @@ describe("Markra workspace", () => {
   it("keeps source mode read-only while read-only mode is active", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
 
     fireEvent.keyDown(window, { key: "s", altKey: true, metaKey: true });
     fireEvent.keyDown(window, { key: "l", altKey: true, metaKey: true });
@@ -8765,7 +8765,7 @@ describe("Markra workspace", () => {
 
   it("prevents visual table controls from editing after read-only mode is toggled", async () => {
     mockOpenMarkdownFile({
-      content: ["| Field | Value |", "| --- | --- |", "| Name | Markra |"].join("\n"),
+      content: ["| Field | Value |", "| --- | --- |", "| Name | marktion |"].join("\n"),
       name: "table.md",
       path: mockNativePath
     });
@@ -9921,7 +9921,7 @@ describe("Markra workspace", () => {
   it("inserts a markdown table from the native editor menu handler", async () => {
     const { container } = renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeApplicationMenu).toHaveBeenCalledTimes(1));
     const menuHandlers = mockedInstallNativeApplicationMenu.mock.calls[0]?.[0] as Record<string, () => unknown>;
 
@@ -9942,7 +9942,7 @@ describe("Markra workspace", () => {
   it("does not expose native editor AI context actions without selected text", async () => {
     renderApp();
 
-    await expectVisibleMarkdownText("Welcome to Markra");
+    await expectVisibleMarkdownText("Welcome to marktion");
     await waitFor(() => expect(mockedInstallNativeEditorContextMenu).toHaveBeenCalledTimes(1));
     const options = mockedInstallNativeEditorContextMenu.mock.calls[0]?.[3];
 

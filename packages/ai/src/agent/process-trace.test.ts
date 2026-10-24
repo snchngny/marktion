@@ -135,7 +135,7 @@ describe("agentProcessTrace", () => {
           details: {
             count: 3,
             providerId: "local-bing",
-            query: "Markra web search"
+            query: "marktion web search"
           }
         },
         toolCallId: "call_web_search",

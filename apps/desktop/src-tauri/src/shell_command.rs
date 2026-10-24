@@ -14,8 +14,8 @@ use winreg::{
     RegKey, RegValue,
 };
 
-const COMMAND_NAME: &str = "markra";
-const MANAGED_MARKER: &str = "Managed by Markra";
+const COMMAND_NAME: &str = "marktion";
+const MANAGED_MARKER: &str = "Managed by marktion";
 const TARGET_PREFIX: &str = "target: ";
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
@@ -28,7 +28,7 @@ pub(crate) struct ShellCommandStatus {
 
 fn shell_command_file_name() -> &'static str {
     if cfg!(windows) {
-        "markra.cmd"
+        "marktion.cmd"
     } else {
         COMMAND_NAME
     }
@@ -57,7 +57,7 @@ fn path_entries() -> Vec<PathBuf> {
 
 fn command_candidates_for_dir(dir: &Path) -> Vec<PathBuf> {
     if cfg!(windows) {
-        ["markra.cmd", "markra.exe", "markra.bat", "markra"]
+        ["marktion.cmd", "marktion.exe", "marktion.bat", "marktion"]
             .into_iter()
             .map(|file_name| dir.join(file_name))
             .collect()
@@ -102,7 +102,7 @@ fn standard_install_dirs() -> Vec<PathBuf> {
     if cfg!(windows) {
         #[cfg(windows)]
         if let Some(local_app_data) = env::var_os("LOCALAPPDATA") {
-            dirs.push(PathBuf::from(local_app_data).join("Markra").join("bin"));
+            dirs.push(PathBuf::from(local_app_data).join("marktion").join("bin"));
         }
     } else {
         if let Some(home) = dirs::home_dir() {
@@ -473,7 +473,7 @@ pub(crate) fn uninstall_shell_command() -> Result<ShellCommandStatus, String> {
 
     if command_path.is_file() {
         if managed_target_from_command(&command_path).is_none() {
-            return Err("The markra command on PATH is not managed by Markra.".to_string());
+            return Err("The marktion command on PATH is not managed by marktion.".to_string());
         }
 
         fs::remove_file(&command_path).map_err(|error| error.to_string())?;
@@ -500,15 +500,15 @@ mod tests {
 
     #[test]
     fn creates_a_managed_shell_script_for_the_markra_executable() {
-        let target = PathBuf::from("/mock-app/Markra.app/Contents/MacOS/markra");
+        let target = PathBuf::from("/mock-app/marktion.app/Contents/MacOS/marktion");
         let script = command_script(&target);
 
         assert!(script.contains(MANAGED_MARKER));
-        assert!(script.contains("target: /mock-app/Markra.app/Contents/MacOS/markra"));
+        assert!(script.contains("target: /mock-app/marktion.app/Contents/MacOS/marktion"));
         if cfg!(windows) {
-            assert!(script.contains("\"/mock-app/Markra.app/Contents/MacOS/markra\" %*"));
+            assert!(script.contains("\"/mock-app/marktion.app/Contents/MacOS/marktion\" %*"));
         } else {
-            assert!(script.contains("exec '/mock-app/Markra.app/Contents/MacOS/markra' \"$@\""));
+            assert!(script.contains("exec '/mock-app/marktion.app/Contents/MacOS/marktion' \"$@\""));
         }
     }
 
@@ -541,8 +541,8 @@ mod tests {
     #[test]
     fn detects_repair_when_a_managed_command_is_not_available_from_the_shell() {
         let root = test_root("path-repair");
-        let command_path = root.join("markra.cmd");
-        let target = root.join("markra.exe");
+        let command_path = root.join("marktion.cmd");
+        let target = root.join("marktion.exe");
         fs::write(&target, "").expect("target should be created");
 
         let status = managed_command_status(&command_path, &target, &target, true);
@@ -554,17 +554,17 @@ mod tests {
 
     #[test]
     fn appends_windows_install_dir_to_user_path_once() {
-        let install_dir = PathBuf::from(r"C:\Users\Mock\AppData\Local\Markra\bin");
+        let install_dir = PathBuf::from(r"C:\Users\Mock\AppData\Local\marktion\bin");
         let original_path = r"C:\Windows\System32;C:\Tools";
         let next_path = windows_path_with_dir(original_path, &install_dir);
 
         assert_eq!(
             next_path,
-            r"C:\Windows\System32;C:\Tools;C:\Users\Mock\AppData\Local\Markra\bin"
+            r"C:\Windows\System32;C:\Tools;C:\Users\Mock\AppData\Local\marktion\bin"
         );
         assert_eq!(windows_path_with_dir(&next_path, &install_dir), next_path);
         assert!(windows_path_contains_dir(
-            r"C:\WINDOWS\system32;c:\users\mock\appdata\local\markra\bin\",
+            r"C:\WINDOWS\system32;c:\users\mock\appdata\local\marktion\bin\",
             &install_dir
         ));
     }

@@ -88,7 +88,7 @@ describe("generateDiagnosticsReport", () => {
       }
     });
 
-    expect(report).toContain("## Markra Diagnostics");
+    expect(report).toContain("## marktion Diagnostics");
     expect(report).toContain("- App version: 9.9.9");
     expect(report).toContain("- Platform: macos");
     expect(report).toContain("- OS version: 15.5");
@@ -122,21 +122,21 @@ describe("generateDiagnosticsReport", () => {
 describe("generateDiagnosticsIssueUrl", () => {
   it("builds a GitHub issue draft with the diagnostics report prefilled", () => {
     const report = [
-      "## Markra Diagnostics",
+      "## marktion Diagnostics",
       "- App version: 9.9.9",
       "- Platform: macos"
     ].join("\n");
     const issueUrl = new URL(generateDiagnosticsIssueUrl(report));
 
     expect(issueUrl.origin).toBe("https://github.com");
-    expect(issueUrl.pathname).toBe("/markrahq/markra/issues/new");
+    expect(issueUrl.pathname).toBe("/snchngny/marktion/issues/new");
     expect(issueUrl.searchParams.get("title")).toBe("Diagnostics report");
     expect(issueUrl.searchParams.get("body")).toContain("## What happened?");
     expect(issueUrl.searchParams.get("body")).toContain(report);
   });
 
   it("uses a custom issue title when provided", () => {
-    const issueUrl = new URL(generateDiagnosticsIssueUrl("## Markra Crash Report", { title: "Crash report" }));
+    const issueUrl = new URL(generateDiagnosticsIssueUrl("## marktion Crash Report", { title: "Crash report" }));
 
     expect(issueUrl.searchParams.get("title")).toBe("Crash report");
   });
@@ -156,7 +156,7 @@ describe("generateCrashDiagnosticsReport", () => {
       platform: "macos"
     });
 
-    expect(report).toContain("## Markra Crash Report");
+    expect(report).toContain("## marktion Crash Report");
     expect(report).toContain("- Error name: Error");
     expect(report).toContain("- Error message: Render exploded");
     expect(report).toContain("- Component stack: available");

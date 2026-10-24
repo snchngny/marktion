@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 describe("formattingPlugin", () => {
-  it("publishes stable Markra-friendly formatting actions", () => {
+  it("publishes stable marktion-friendly formatting actions", () => {
     const view = createView();
 
     expect(
@@ -243,7 +243,7 @@ describe("formattingPlugin", () => {
     ).toBe("text");
   });
 
-  it("toggles Markra highlight syntax", () => {
+  it("toggles marktion highlight syntax", () => {
     const view = createView();
 
     expect(runMarkraCommand(view, "format.highlight")).toBe(true);

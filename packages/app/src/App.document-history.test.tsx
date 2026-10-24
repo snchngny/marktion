@@ -78,7 +78,7 @@ function replaceMarkdownSource(sourceEditor: HTMLElement, value: string) {
   });
 }
 
-describe("Markra document history restore", () => {
+describe("marktion document history restore", () => {
   beforeEach(() => {
     editorControllerSpies.replaceMarkdown.mockReset();
   });
@@ -195,8 +195,8 @@ describe("Markra document history restore", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open Markdown or Folder" }));
     await expectVisualMarkdownText("Current");
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle Markra AI" }));
-    expect(await screen.findByRole("complementary", { name: "Markra AI" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Toggle marktion AI" }));
+    expect(await screen.findByRole("complementary", { name: "marktion AI" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show history" }));
 

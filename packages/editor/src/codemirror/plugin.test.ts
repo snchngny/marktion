@@ -32,7 +32,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("Markra plugins", () => {
+describe("marktion plugins", () => {
   it("composes CodeMirror extensions and exposes command-backed UI", () => {
     const syntheticFacet = Facet.define<string, string>({
       combine: (values) => values.join(","),
@@ -110,10 +110,10 @@ describe("Markra plugins", () => {
     });
 
     expect(() => createView([markraPlugins([first, duplicatePlugin])])).toThrow(
-      'Duplicate Markra plugin id "markra.first"',
+      'Duplicate marktion plugin id "markra.first"',
     );
     expect(() => createView([markraPlugins([first, duplicateCommand])])).toThrow(
-      'Duplicate Markra command id "synthetic.command"',
+      'Duplicate marktion command id "synthetic.command"',
     );
   });
 
@@ -152,7 +152,7 @@ describe("Markra plugins", () => {
     });
 
     expect(() => createView([markraPlugins([plugin])])).toThrow(
-      'Unknown Markra command id "missing.command"',
+      'Unknown marktion command id "missing.command"',
     );
   });
 });

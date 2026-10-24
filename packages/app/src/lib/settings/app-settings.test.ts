@@ -545,7 +545,7 @@ describe("app settings", () => {
   });
 
   it("rejects invalid settings imports without writing to the settings store", async () => {
-    await expect(importStoredAppSettings("{not json")).rejects.toThrow("Invalid Markra settings file.");
+    await expect(importStoredAppSettings("{not json")).rejects.toThrow("Invalid marktion settings file.");
 
     expect(mockedLoadStore).not.toHaveBeenCalled();
     expect(store.set).not.toHaveBeenCalled();

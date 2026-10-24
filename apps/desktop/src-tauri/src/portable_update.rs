@@ -15,7 +15,7 @@ use tauri_plugin_updater::{Update, UpdaterExt};
 use zip::ZipArchive;
 
 pub(crate) const PORTABLE_MANIFEST_NAME: &str = "markra-portable.json";
-const PORTABLE_ARCHIVE_ROOT: &str = "Markra";
+const PORTABLE_ARCHIVE_ROOT: &str = "marktion";
 const PORTABLE_UPDATE_TARGET: &str = "windows-portable-x86_64";
 const PORTABLE_UPDATE_WORK_DIR: &str = ".markra-update";
 const PORTABLE_UPDATE_HELPER_PREFIX: &str = "markra-portable-helper-";
@@ -372,11 +372,11 @@ fn wait_for_parent_process(parent_process_id: u32) -> Result<(), String> {
         Ok(())
     } else if result == WAIT_FAILED {
         Err(portable_error(
-            "failed to wait for Markra to exit",
+            "failed to wait for marktion to exit",
             std::io::Error::last_os_error(),
         ))
     } else {
-        Err("timed out waiting for Markra to exit".to_string())
+        Err("timed out waiting for marktion to exit".to_string())
     }
 }
 
@@ -475,9 +475,9 @@ fn create_staging_paths(install_dir: &Path) -> Result<StagedPortableUpdate, Stri
 
 fn current_portable_executable() -> Result<PathBuf, String> {
     let executable = env::current_exe()
-        .map_err(|error| portable_error("failed to locate the Markra executable", error))?;
+        .map_err(|error| portable_error("failed to locate the marktion executable", error))?;
     if !cfg!(windows) || !is_portable_executable(&executable) {
-        return Err("Markra is not running from a supported portable package".to_string());
+        return Err("marktion is not running from a supported portable package".to_string());
     }
     Ok(executable)
 }
@@ -712,12 +712,12 @@ mod tests {
     #[test]
     fn detects_portable_installations_from_the_managed_manifest() {
         let root = tempdir().expect("temporary directory should exist");
-        let executable = root.path().join("Markra.exe");
+        let executable = root.path().join("marktion.exe");
         fs::write(&executable, b"binary").expect("executable should be written");
         write_manifest(
             root.path(),
-            "Markra.exe",
-            &["Markra.exe", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", PORTABLE_MANIFEST_NAME],
         );
 
         assert!(is_portable_executable(&executable));
@@ -727,12 +727,12 @@ mod tests {
     #[test]
     fn detects_portable_executable_names_case_insensitively_like_windows() {
         let root = tempdir().expect("temporary directory should exist");
-        let executable = root.path().join("markra.exe");
+        let executable = root.path().join("marktion.exe");
         fs::write(&executable, b"binary").expect("executable should be written");
         write_manifest(
             root.path(),
-            "Markra.exe",
-            &["Markra.exe", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", PORTABLE_MANIFEST_NAME],
         );
 
         assert!(is_portable_executable(&executable));
@@ -742,13 +742,13 @@ mod tests {
     fn extracts_a_valid_portable_package_into_the_staging_directory() {
         let root = tempdir().expect("temporary directory should exist");
         let archive = portable_archive(&[
-            ("Markra/Markra.exe", b"new-binary"),
-            ("Markra/support.dll", b"new-library"),
+            ("marktion/marktion.exe", b"new-binary"),
+            ("marktion/support.dll", b"new-library"),
             (
-                "Markra/markra-portable.json",
+                "marktion/markra-portable.json",
                 manifest(
-                    "Markra.exe",
-                    &["Markra.exe", "support.dll", PORTABLE_MANIFEST_NAME],
+                    "marktion.exe",
+                    &["marktion.exe", "support.dll", PORTABLE_MANIFEST_NAME],
                 )
                 .as_bytes(),
             ),
@@ -757,9 +757,9 @@ mod tests {
         let extracted = extract_portable_package(&archive, root.path())
             .expect("portable package should extract");
 
-        assert_eq!(extracted.executable, "Markra.exe");
+        assert_eq!(extracted.executable, "marktion.exe");
         assert_eq!(
-            fs::read(root.path().join("Markra.exe")).unwrap(),
+            fs::read(root.path().join("marktion.exe")).unwrap(),
             b"new-binary"
         );
         assert_eq!(
@@ -772,12 +772,12 @@ mod tests {
     fn rejects_unsafe_paths_before_extracting_portable_files() {
         let root = tempdir().expect("temporary directory should exist");
         let archive = portable_archive(&[
-            ("Markra/Markra.exe", b"new-binary"),
+            ("marktion/marktion.exe", b"new-binary"),
             (
-                "Markra/markra-portable.json",
+                "marktion/markra-portable.json",
                 manifest(
-                    "Markra.exe",
-                    &["Markra.exe", "../outside.dll", PORTABLE_MANIFEST_NAME],
+                    "marktion.exe",
+                    &["marktion.exe", "../outside.dll", PORTABLE_MANIFEST_NAME],
                 )
                 .as_bytes(),
             ),
@@ -787,7 +787,7 @@ mod tests {
             .expect_err("unsafe portable paths should be rejected");
 
         assert!(error.contains("unsafe portable path"));
-        assert!(!root.path().join("Markra.exe").exists());
+        assert!(!root.path().join("marktion.exe").exists());
     }
 
     #[test]
@@ -799,33 +799,36 @@ mod tests {
         fs::create_dir_all(&install).unwrap();
         fs::create_dir_all(&staged).unwrap();
 
-        fs::write(install.join("Markra.exe"), b"old-binary").unwrap();
+        fs::write(install.join("marktion.exe"), b"old-binary").unwrap();
         fs::write(install.join("support.dll"), b"old-library").unwrap();
         fs::write(install.join("obsolete.dll"), b"obsolete-library").unwrap();
         fs::write(install.join("notes.md"), b"user-file").unwrap();
         write_manifest(
             &install,
-            "Markra.exe",
+            "marktion.exe",
             &[
-                "Markra.exe",
+                "marktion.exe",
                 "support.dll",
                 "obsolete.dll",
                 PORTABLE_MANIFEST_NAME,
             ],
         );
 
-        fs::write(staged.join("Markra.exe"), b"new-binary").unwrap();
+        fs::write(staged.join("marktion.exe"), b"new-binary").unwrap();
         fs::write(staged.join("support.dll"), b"new-library").unwrap();
         write_manifest(
             &staged,
-            "Markra.exe",
-            &["Markra.exe", "support.dll", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", "support.dll", PORTABLE_MANIFEST_NAME],
         );
 
         apply_staged_update(&staged, &install, &backup)
             .expect("staged portable update should apply");
 
-        assert_eq!(fs::read(install.join("Markra.exe")).unwrap(), b"new-binary");
+        assert_eq!(
+            fs::read(install.join("marktion.exe")).unwrap(),
+            b"new-binary"
+        );
         assert_eq!(
             fs::read(install.join("support.dll")).unwrap(),
             b"new-library"
@@ -843,26 +846,29 @@ mod tests {
         fs::create_dir_all(&install).unwrap();
         fs::create_dir_all(&staged).unwrap();
 
-        fs::write(install.join("Markra.exe"), b"old-binary").unwrap();
+        fs::write(install.join("marktion.exe"), b"old-binary").unwrap();
         fs::write(install.join("future.dll"), b"user-library").unwrap();
         write_manifest(
             &install,
-            "Markra.exe",
-            &["Markra.exe", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", PORTABLE_MANIFEST_NAME],
         );
-        fs::write(staged.join("Markra.exe"), b"new-binary").unwrap();
+        fs::write(staged.join("marktion.exe"), b"new-binary").unwrap();
         fs::write(staged.join("future.dll"), b"package-library").unwrap();
         write_manifest(
             &staged,
-            "Markra.exe",
-            &["Markra.exe", "future.dll", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", "future.dll", PORTABLE_MANIFEST_NAME],
         );
 
         let error = apply_staged_update(&staged, &install, &backup)
             .expect_err("unmanaged files should not be overwritten");
 
         assert!(error.contains("unmanaged portable file"));
-        assert_eq!(fs::read(install.join("Markra.exe")).unwrap(), b"old-binary");
+        assert_eq!(
+            fs::read(install.join("marktion.exe")).unwrap(),
+            b"old-binary"
+        );
         assert_eq!(
             fs::read(install.join("future.dll")).unwrap(),
             b"user-library"
@@ -878,24 +884,27 @@ mod tests {
         fs::create_dir_all(install.join("blocked.dll")).unwrap();
         fs::create_dir_all(&staged).unwrap();
 
-        fs::write(install.join("Markra.exe"), b"old-binary").unwrap();
+        fs::write(install.join("marktion.exe"), b"old-binary").unwrap();
         write_manifest(
             &install,
-            "Markra.exe",
-            &["Markra.exe", "blocked.dll", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", "blocked.dll", PORTABLE_MANIFEST_NAME],
         );
-        fs::write(staged.join("Markra.exe"), b"new-binary").unwrap();
+        fs::write(staged.join("marktion.exe"), b"new-binary").unwrap();
         fs::write(staged.join("blocked.dll"), b"new-library").unwrap();
         write_manifest(
             &staged,
-            "Markra.exe",
-            &["Markra.exe", "blocked.dll", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", "blocked.dll", PORTABLE_MANIFEST_NAME],
         );
 
         apply_staged_update(&staged, &install, &backup)
             .expect_err("the blocked destination should fail the update");
 
-        assert_eq!(fs::read(install.join("Markra.exe")).unwrap(), b"old-binary");
+        assert_eq!(
+            fs::read(install.join("marktion.exe")).unwrap(),
+            b"old-binary"
+        );
         assert!(install.join("blocked.dll").is_dir());
         assert!(manifest_for_root(&install).is_ok());
     }
@@ -909,18 +918,18 @@ mod tests {
         let backup = work.join("backup");
         fs::create_dir_all(install.join("blocked.dll")).unwrap();
         fs::create_dir_all(&staged).unwrap();
-        fs::write(install.join("Markra.exe"), b"old-binary").unwrap();
+        fs::write(install.join("marktion.exe"), b"old-binary").unwrap();
         write_manifest(
             &install,
-            "Markra.exe",
-            &["Markra.exe", "blocked.dll", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", "blocked.dll", PORTABLE_MANIFEST_NAME],
         );
-        fs::write(staged.join("Markra.exe"), b"new-binary").unwrap();
+        fs::write(staged.join("marktion.exe"), b"new-binary").unwrap();
         fs::write(staged.join("blocked.dll"), b"new-library").unwrap();
         write_manifest(
             &staged,
-            "Markra.exe",
-            &["Markra.exe", "blocked.dll", PORTABLE_MANIFEST_NAME],
+            "marktion.exe",
+            &["marktion.exe", "blocked.dll", PORTABLE_MANIFEST_NAME],
         );
         let restarted = std::cell::Cell::new(false);
         let request = PortableHelperRequest {
@@ -936,20 +945,23 @@ mod tests {
             |_| Ok(()),
             |executable| {
                 restarted.set(true);
-                assert_eq!(executable, install.join("Markra.exe"));
+                assert_eq!(executable, install.join("marktion.exe"));
                 Ok(())
             },
         )
         .expect_err("the failed update should still be reported");
 
         assert!(restarted.get());
-        assert_eq!(fs::read(install.join("Markra.exe")).unwrap(), b"old-binary");
+        assert_eq!(
+            fs::read(install.join("marktion.exe")).unwrap(),
+            b"old-binary"
+        );
     }
 
     #[test]
     fn parses_only_complete_portable_update_helper_requests() {
         let args = [
-            "Markra.exe",
+            "marktion.exe",
             PORTABLE_UPDATE_HELPER_ARG,
             "42",
             "/mock/staged",
@@ -965,7 +977,7 @@ mod tests {
         assert_eq!(request.install_dir, Path::new("/mock/install"));
         assert_eq!(request.backup_dir, Path::new("/mock/backup"));
         assert!(parse_portable_update_helper_request(
-            ["Markra.exe", PORTABLE_UPDATE_HELPER_ARG]
+            ["marktion.exe", PORTABLE_UPDATE_HELPER_ARG]
                 .iter()
                 .map(Into::into)
         )
@@ -976,7 +988,7 @@ mod tests {
     fn preserves_the_data_directory_in_portable_update_helper_requests() {
         let request = parse_portable_update_helper_request(
             [
-                "Markra.exe",
+                "marktion.exe",
                 PORTABLE_UPDATE_HELPER_ARG,
                 "42",
                 "/mock/staged",
@@ -997,15 +1009,17 @@ mod tests {
 
     #[test]
     fn restarts_the_updated_app_with_the_same_absolute_data_directory() {
-        let command =
-            portable_restart_command(Path::new("/mock/Markra.exe"), Some(Path::new("/mock data")));
-        assert_eq!(command.get_program(), OsStr::new("/mock/Markra.exe"));
+        let command = portable_restart_command(
+            Path::new("/mock/marktion.exe"),
+            Some(Path::new("/mock data")),
+        );
+        assert_eq!(command.get_program(), OsStr::new("/mock/marktion.exe"));
         assert_eq!(
             command.get_args().collect::<Vec<_>>(),
             vec![OsStr::new("--user-data-dir"), OsStr::new("/mock data")]
         );
         assert_eq!(
-            portable_restart_command(Path::new("/mock/Markra.exe"), None)
+            portable_restart_command(Path::new("/mock/marktion.exe"), None)
                 .get_args()
                 .count(),
             0

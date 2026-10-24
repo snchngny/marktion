@@ -49,7 +49,7 @@ describe("NativeTitleBar", () => {
     expect(screen.getByRole("button", { name: "Open Markdown or Folder" }).closest(".titlebar-spacer")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save Markdown" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Switch to dark theme" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Toggle Markra AI" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Toggle marktion AI" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Toggle file list" })).toBeInTheDocument();
     expect(container.querySelector("[data-titlebar-action='open']")).not.toBeInTheDocument();
     expect(within(container.querySelector(".document-actions") as HTMLElement).queryByRole("button", { name: "Open Markdown or Folder" })).not.toBeInTheDocument();
@@ -89,7 +89,7 @@ describe("NativeTitleBar", () => {
       />
     );
 
-    expect(screen.queryByRole("button", { name: "Toggle Markra AI" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Toggle marktion AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Editor view mode: Preview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save Markdown" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Switch to dark theme" })).not.toBeInTheDocument();
@@ -638,22 +638,22 @@ describe("NativeTitleBar", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("menuitem", { name: "Markra" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "marktion" }));
 
-    expect(screen.getByRole("menu", { name: "Markra" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("menuitem", { name: "About Markra" }));
+    expect(screen.getByRole("menu", { name: "marktion" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "About marktion" }));
     expect(showAbout).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole("menuitem", { name: "Markra" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "marktion" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Settings... Ctrl+," }));
     expect(openSettings).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole("menuitem", { name: "Markra" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "marktion" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Check for updates" }));
     expect(checkForUpdates).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole("menuitem", { name: "Markra" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Quit Markra" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "marktion" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Quit marktion" }));
     expect(exitApp).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("menuitem", { name: "File" }));
@@ -765,9 +765,9 @@ describe("NativeTitleBar", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("menuitem", { name: "Markra" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "marktion" }));
 
-    const hiddenItem = screen.getByRole("menuitem", { name: "Hide Markra" });
+    const hiddenItem = screen.getByRole("menuitem", { name: "Hide marktion" });
     expect(hiddenItem).toHaveAttribute("data-disabled");
     expect(hiddenItem.className).toContain("data-disabled:opacity-45");
     expect(hiddenItem.className).toContain("data-disabled:pointer-events-none");
@@ -801,8 +801,8 @@ describe("NativeTitleBar", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("menuitem", { name: "Markra" }));
-    expect(screen.getByRole("menu", { name: "Markra" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "marktion" }));
+    expect(screen.getByRole("menu", { name: "marktion" })).toBeInTheDocument();
 
     fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "File" }), {
       clientX: 80,
@@ -810,7 +810,7 @@ describe("NativeTitleBar", () => {
     });
 
     expect(screen.getByRole("menu", { name: "File" })).toBeInTheDocument();
-    expect(screen.queryByRole("menu", { name: "Markra" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menu", { name: "marktion" })).not.toBeInTheDocument();
   });
 
   it("toggles the Windows window state from self-drawn titlebar double-click mouse downs", () => {
@@ -873,7 +873,7 @@ describe("NativeTitleBar", () => {
     expect(container.querySelector(".windows-app-chrome .windows-window-controls")).toBeInTheDocument();
   });
 
-  it("keeps compact Windows file actions clear of the Markra AI panel", () => {
+  it("keeps compact Windows file actions clear of the marktion AI panel", () => {
     const { container } = render(
       <NativeTitleBar
         aiAgentOpen
@@ -899,10 +899,10 @@ describe("NativeTitleBar", () => {
     expect(container.querySelector(".windows-titlebar-actions")).not.toHaveStyle({ transform: "translateX(-384px)" });
     expect(container.querySelector(".windows-app-chrome .windows-window-controls")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open Markdown or Folder" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Toggle Markra AI" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Toggle marktion AI" })).toBeInTheDocument();
   });
 
-  it("toggles the right-side Markra AI panel from the file action area", () => {
+  it("toggles the right-side marktion AI panel from the file action area", () => {
     const toggleAiAgent = vi.fn();
     const { container } = render(
       <NativeTitleBar
@@ -920,7 +920,7 @@ describe("NativeTitleBar", () => {
       />
     );
 
-    const button = screen.getByRole("button", { name: "Toggle Markra AI" });
+    const button = screen.getByRole("button", { name: "Toggle marktion AI" });
 
     expect(button).toHaveAttribute("aria-pressed", "true");
     expect(button).toContainElement(container.querySelector(".lucide-bot"));
@@ -1273,7 +1273,7 @@ describe("NativeTitleBar", () => {
 
     expect(actionLabels).toEqual([
       "Switch to dark theme",
-      "Toggle Markra AI",
+      "Toggle marktion AI",
       "Editor view mode: Preview",
       "Show history"
     ]);
@@ -1306,7 +1306,7 @@ describe("NativeTitleBar", () => {
       />
     );
 
-    const aiButton = screen.getByRole("button", { name: "Toggle Markra AI" });
+    const aiButton = screen.getByRole("button", { name: "Toggle marktion AI" });
     mockTitlebarActionRects(["aiAgent", "sourceMode", "save", "theme", "viewMode", "history"]);
 
     fireEvent.mouseDown(aiButton, { button: 0, clientX: 10, clientY: 10 });
@@ -1392,7 +1392,7 @@ describe("NativeTitleBar", () => {
     expect(screen.queryByRole("group", { name: "Content width" })).not.toBeInTheDocument();
   });
 
-  it("centers the document title inside the editor area when the Markra AI panel is open", () => {
+  it("centers the document title inside the editor area when the marktion AI panel is open", () => {
     const { container } = render(
       <NativeTitleBar
         aiAgentOpen
@@ -1433,7 +1433,7 @@ describe("NativeTitleBar", () => {
     expect(container.querySelector(".native-title")).toHaveStyle({ transform: "translateX(110px)" });
   });
 
-  it("balances the document title between the markdown files sidebar and Markra AI panel", () => {
+  it("balances the document title between the markdown files sidebar and marktion AI panel", () => {
     const { container } = render(
       <NativeTitleBar
         aiAgentOpen
@@ -1454,7 +1454,7 @@ describe("NativeTitleBar", () => {
     expect(container.querySelector(".native-title")).toHaveStyle({ transform: "translateX(-112px)" });
   });
 
-  it("keeps file actions synced immediately while the Markra AI panel is resizing", () => {
+  it("keeps file actions synced immediately while the marktion AI panel is resizing", () => {
     const { container } = render(
       <NativeTitleBar
         aiAgentOpen
@@ -1564,7 +1564,7 @@ describe("NativeTitleBar", () => {
     expect(screen.queryByRole("button", { name: "Open Markdown or Folder" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save Markdown" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Switch to dark theme" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Toggle Markra AI" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Toggle marktion AI" })).toBeInTheDocument();
     expect(container.querySelector(".document-actions")).toHaveClass("relative");
     expect(container.querySelector(".document-actions")).not.toHaveStyle({ transform: "translateX(-384px)" });
     expect(container.querySelector(".windows-titlebar-actions")).not.toHaveStyle({ transform: "translateX(-384px)" });

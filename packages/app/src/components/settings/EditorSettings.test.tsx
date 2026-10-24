@@ -802,7 +802,7 @@ describe("EditorSettings", () => {
       "Switch to dark theme",
       "Save Markdown",
       "Editor view mode",
-      "Toggle Markra AI",
+      "Toggle marktion AI",
       "View mode"
     ]);
     expect(screen.getByRole("button", { name: "Switch to dark theme" })).toHaveAttribute("aria-pressed", "true");

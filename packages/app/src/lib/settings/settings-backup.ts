@@ -13,7 +13,7 @@ import {
 const settingsBackupFormat = "markra-settings-backup";
 const settingsBackupVersion = 1;
 const legacySettingsExportFormat = "markra-settings";
-const invalidSettingsBackupFileMessage = "Invalid Markra settings backup file.";
+const invalidSettingsBackupFileMessage = "Invalid marktion settings backup file.";
 
 export const settingsBackupRemotePath = "markra/settings/markra-settings.json";
 export const settingsBackupFileSuggestedName = "markra-settings-backup.json";

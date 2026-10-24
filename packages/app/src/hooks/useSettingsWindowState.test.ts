@@ -56,7 +56,7 @@ describe("settings window import and export", () => {
     resetAppRuntimeForTests();
   });
 
-  it("exports the current app settings to a Markra settings file", async () => {
+  it("exports the current app settings to a marktion settings file", async () => {
     const defaultRuntime = createDefaultAppRuntime();
     const saveSettingsFile = vi.fn(async (input) => ({
       name: input.suggestedName,
@@ -89,7 +89,7 @@ describe("settings window import and export", () => {
     });
   });
 
-  it("imports settings from a selected Markra settings file and refreshes the panel state", async () => {
+  it("imports settings from a selected marktion settings file and refreshes the panel state", async () => {
     const defaultRuntime = createDefaultAppRuntime();
     const emit = vi.fn(async () => undefined);
     const importedSettings = {
@@ -128,7 +128,7 @@ describe("settings window import and export", () => {
       await result.current.handleImportSettings();
     });
 
-    expect(openSettingsFile).toHaveBeenCalledWith({ title: "Import Markra settings" });
+    expect(openSettingsFile).toHaveBeenCalledWith({ title: "Import marktion settings" });
     await waitFor(() => {
       expect(result.current.editorPreferences.bodyFontSize).toBe(20);
     });

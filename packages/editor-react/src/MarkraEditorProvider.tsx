@@ -45,7 +45,7 @@ export function useMarkraEditorContext() {
   const context = useContext(MarkraEditorContext);
   if (!context) {
     throw new Error(
-      "Markra editor React hooks must be used inside MarkraEditorProvider",
+      "marktion editor React hooks must be used inside MarkraEditorProvider",
     );
   }
   return context;

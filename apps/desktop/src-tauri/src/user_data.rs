@@ -148,7 +148,7 @@ pub(crate) fn configure_webview<R: Runtime>(
 ) -> WebviewWindowBuilder<'_, R, tauri::AppHandle<R>> {
     if let Some(directory) = user_data_dir() {
         // WKWebView cannot store its cache at an arbitrary path. Keep it ephemeral
-        // for custom profiles; durable Markra data is stored through native paths.
+        // for custom profiles; durable marktion data is stored through native paths.
         #[cfg(target_os = "macos")]
         {
             let _ = directory;
@@ -162,7 +162,7 @@ pub(crate) fn configure_webview<R: Runtime>(
 
 fn check_running_directory(current: Option<&Path>, requested: Option<&Path>) -> Result<(), String> {
     if requested.is_some() && current != requested {
-        return Err("Markra is already running with a different data directory. Quit Markra before starting it with --user-data-dir.".into());
+        return Err("marktion is already running with a different data directory. Quit marktion before starting it with --user-data-dir.".into());
     }
     Ok(())
 }

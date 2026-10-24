@@ -181,7 +181,7 @@ export function WindowsNativeTitleBar({
   const windowsAppMenus: AppMenuConfig[] = [
     {
       id: "app",
-      label: "Markra",
+      label: "marktion",
       triggerClassName: "font-[620] text-(--text-heading)"
     },
     { id: "file", label: label("menu.file"), triggerClassName: "text-(--text-primary)" },

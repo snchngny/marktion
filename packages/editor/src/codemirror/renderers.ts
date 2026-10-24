@@ -56,7 +56,7 @@ function createRendererRegistry(
 
   for (const renderer of renderers) {
     if (ids.has(renderer.id)) {
-      throw new Error(`Duplicate Markra renderer id "${renderer.id}"`);
+      throw new Error(`Duplicate marktion renderer id "${renderer.id}"`);
     }
     ids.add(renderer.id);
 
@@ -76,10 +76,10 @@ const rendererFacet = Facet.define<MarkraRenderer, RendererRegistry>({
 
 export function markraRenderer(renderer: MarkraRenderer): Extension {
   if (!renderer.id.trim()) {
-    throw new Error("Markra renderer id must not be empty");
+    throw new Error("marktion renderer id must not be empty");
   }
   if (renderer.nodeNames.length === 0) {
-    throw new Error(`Markra renderer "${renderer.id}" must declare a node name`);
+    throw new Error(`marktion renderer "${renderer.id}" must declare a node name`);
   }
   return rendererFacet.of(renderer);
 }

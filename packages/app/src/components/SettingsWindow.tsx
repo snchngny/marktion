@@ -200,7 +200,7 @@ export function SettingsWindow() {
             className="relative z-20 flex h-10 items-center px-3 text-[12px] leading-none font-[620] text-(--text-heading)"
             data-tauri-drag-region
           >
-            Markra
+            marktion
           </div>
           <div
             className="pointer-events-none absolute top-0 left-1/2 z-10 flex h-10 -translate-x-1/2 items-center justify-center px-6 text-[12px] leading-none font-[620] text-(--text-heading)"

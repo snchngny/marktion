@@ -441,7 +441,7 @@ const pdfFilters = [
 
 const settingsFilters = [
   {
-    name: "Markra settings",
+    name: "marktion settings",
     extensions: ["json"]
   }
 ];

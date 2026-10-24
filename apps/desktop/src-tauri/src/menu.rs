@@ -22,7 +22,7 @@ const PASTE_PLAIN_TEXT_DEFAULT_ACCELERATOR: &str = "CmdOrCtrl+Shift+V";
 const CHECK_FOR_UPDATES_COMMAND: &str = "checkForUpdates";
 const EDIT_UNDO_COMMAND: &str = "editUndo";
 const EDIT_REDO_COMMAND: &str = "editRedo";
-const MARKRA_GITHUB_URL: &str = "https://github.com/markrahq/markra";
+const MARKTION_GITHUB_URL: &str = "https://github.com/snchngny/marktion";
 const OPEN_RECENT_FILE_SUBMENU_ID: &str = "markra:file:open-recent";
 const EMPTY_OPEN_RECENT_FILE_COMMAND: &str = "markra:file:open-recent:empty";
 
@@ -315,11 +315,11 @@ fn app_menu_item_without_accelerator<R: tauri::Runtime, M: Manager<R>>(
 
 fn application_about_metadata() -> AboutMetadata<'static> {
     AboutMetadata {
-        name: Some("Markra".into()),
+        name: Some("marktion".into()),
         version: Some(env!("CARGO_PKG_VERSION").into()),
-        website: Some(MARKRA_GITHUB_URL.into()),
+        website: Some(MARKTION_GITHUB_URL.into()),
         website_label: Some("GitHub".into()),
-        credits: Some(format!("GitHub: {MARKRA_GITHUB_URL}")),
+        credits: Some(format!("GitHub: {MARKTION_GITHUB_URL}\nOriginal project and contributors: https://github.com/markrahq/markra")),
         ..Default::default()
     }
 }
@@ -333,7 +333,7 @@ fn native_about_full_version(metadata: &AboutMetadata<'_>) -> Option<String> {
 }
 
 fn native_about_dialog_title(metadata: &AboutMetadata<'_>) -> String {
-    format!("About {}", metadata.name.as_deref().unwrap_or("Markra"))
+    format!("About {}", metadata.name.as_deref().unwrap_or("marktion"))
 }
 
 fn native_about_dialog_message(metadata: &AboutMetadata<'_>) -> String {
@@ -412,7 +412,7 @@ fn show_native_app_about_for_window<R: tauri::Runtime>(
 fn show_native_app_about_for_window<R: tauri::Runtime>(
     window: &tauri::Window<R>,
 ) -> Result<(), String> {
-    // On Linux the self-drawn titlebar's "About Markra" entry is wired to
+    // On Linux the self-drawn titlebar's "About marktion" entry is wired to
     // this command instead of a native predefined About item (the native
     // menubar is hidden). Surface the same metadata used by the Windows
     // implementation through tauri-plugin-dialog so the panel renders with
@@ -466,7 +466,7 @@ fn create_markra_app_submenu<R: tauri::Runtime>(
     let check_updates =
         app_menu_item_without_accelerator(app, CHECK_FOR_UPDATES_COMMAND, labels.check_updates)?;
 
-    SubmenuBuilder::with_id(app, "markra:app", "Markra")
+    SubmenuBuilder::with_id(app, "markra:app", "marktion")
         .about(Some(application_about_metadata()))
         .separator()
         .items(&[&settings, &check_updates])
@@ -1246,29 +1246,33 @@ mod tests {
     fn about_metadata_includes_version_and_github_link() {
         let metadata = application_about_metadata();
 
-        assert_eq!(metadata.name.as_deref(), Some("Markra"));
+        assert_eq!(metadata.name.as_deref(), Some("marktion"));
         assert_eq!(metadata.version.as_deref(), Some(env!("CARGO_PKG_VERSION")));
         assert_eq!(
             metadata.website.as_deref(),
-            Some("https://github.com/markrahq/markra")
+            Some("https://github.com/snchngny/marktion")
         );
         assert_eq!(metadata.website_label.as_deref(), Some("GitHub"));
         assert!(metadata
             .credits
             .as_deref()
             .is_some_and(|credits| credits.contains("https://github.com/markrahq/markra")));
+        assert!(metadata
+            .credits
+            .as_deref()
+            .is_some_and(|credits| credits.contains(MARKTION_GITHUB_URL)));
     }
 
     #[test]
     fn native_about_dialog_uses_application_metadata() {
         let metadata = application_about_metadata();
 
-        assert_eq!(native_about_dialog_title(&metadata), "About Markra");
+        assert_eq!(native_about_dialog_title(&metadata), "About marktion");
 
         let message = native_about_dialog_message(&metadata);
-        assert!(message.contains("Name: Markra"));
+        assert!(message.contains("Name: marktion"));
         assert!(message.contains(&format!("Version: {}", env!("CARGO_PKG_VERSION"))));
-        assert!(message.contains(&format!("Website: GitHub {MARKRA_GITHUB_URL}")));
+        assert!(message.contains(&format!("Website: GitHub {MARKTION_GITHUB_URL}")));
     }
 
     #[test]

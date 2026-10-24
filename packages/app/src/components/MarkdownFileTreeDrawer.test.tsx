@@ -4181,7 +4181,7 @@ describe("MarkdownFileTreeDrawer", () => {
     expect(deletedTitle.tagName).toBe("DEL");
   });
 
-  it("renders Markra highlight and inline math in outline titles", () => {
+  it("renders marktion highlight and inline math in outline titles", () => {
     render(
       <MarkdownFileTreeDrawer
         currentPath="/vault/Untitled.md"

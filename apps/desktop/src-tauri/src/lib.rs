@@ -200,7 +200,7 @@ pub fn run_portable_update_helper_if_requested() -> bool {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     if let Err(error) = user_data::initialize_user_data_dir(std::env::args()) {
-        eprintln!("Could not start Markra: {error}");
+        eprintln!("Could not start marktion: {error}");
         std::process::exit(2);
     }
     let mut context = tauri::generate_context!();
@@ -232,7 +232,7 @@ pub fn run() {
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
         if let Err(error) = user_data::check_forwarded_directory(&args, Path::new(&cwd)) {
             eprintln!("{error}");
-            let mut dialog = app.dialog().message(error).title("Markra");
+            let mut dialog = app.dialog().message(error).title("marktion");
             let window = app
                 .webview_windows()
                 .into_values()
@@ -434,7 +434,7 @@ pub fn run() {
             open_log_folder
         ])
         .build(context)
-        .expect("error while building Markra")
+        .expect("error while building marktion")
         .run(|app, event| match event {
             tauri::RunEvent::ExitRequested { code, api, .. } => {
                 handle_app_exit_requested(app, code, api);
@@ -446,7 +446,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { .. } => {
                 // Settings may stay visible after prewarm. Treating that as an editor would skip
-                // workspace restore when the user reopens Markra from the Dock.
+                // workspace restore when the user reopens marktion from the Dock.
                 if !has_visible_editor_window(app) {
                     reveal_or_open_markdown_paths(app, Vec::new(), true);
                 }
@@ -489,7 +489,7 @@ mod tests {
                                 .any(|extension| extension.as_str() == Some("markdown"))
                     })
             })
-            .expect("Markdown extensions should be associated with Markra");
+            .expect("Markdown extensions should be associated with marktion");
 
         assert_eq!(
             markdown_association
@@ -528,7 +528,7 @@ mod tests {
                 .is_some_and(|components| {
                     components
                         .iter()
-                        .any(|component| component.as_str() == Some("MarkraExplorerMenu"))
+                        .any(|component| component.as_str() == Some("marktionExplorerMenu"))
                 }),
             "WiX should install the Explorer menu registry component"
         );
@@ -538,7 +538,7 @@ mod tests {
             .expect("NSIS Explorer menu hooks should exist");
         assert!(nsis_hooks.contains("NSIS_HOOK_POSTINSTALL"));
         assert!(nsis_hooks.contains("NSIS_HOOK_PREUNINSTALL"));
-        assert!(nsis_hooks.contains(r"Software\Classes\${OBJECT}\shell\Markra.open"));
+        assert!(nsis_hooks.contains(r"Software\Classes\${OBJECT}\shell\marktion.open"));
         assert!(nsis_hooks.contains(r#""SystemFileAssociations\.txt""#));
         assert!(nsis_hooks.contains(r#""Directory""#));
         assert!(nsis_hooks.contains(r#""Directory\Background""#));
@@ -550,10 +550,10 @@ mod tests {
 
         let wix_fragment = std::fs::read_to_string(windows_dir.join("explorer-menu.wxs"))
             .expect("WiX Explorer menu fragment should exist");
-        assert!(wix_fragment.contains("MarkraExplorerMenu"));
-        assert!(wix_fragment.contains(r"SystemFileAssociations\.txt\shell\Markra.open"));
-        assert!(wix_fragment.contains(r"Directory\shell\Markra.open"));
-        assert!(wix_fragment.contains(r"Directory\Background\shell\Markra.open"));
+        assert!(wix_fragment.contains("marktionExplorerMenu"));
+        assert!(wix_fragment.contains(r"SystemFileAssociations\.txt\shell\marktion.open"));
+        assert!(wix_fragment.contains(r"Directory\shell\marktion.open"));
+        assert!(wix_fragment.contains(r"Directory\Background\shell\marktion.open"));
         assert!(wix_fragment.contains("&quot;%1&quot;"));
         assert!(wix_fragment.contains("&quot;%V&quot;"));
         assert!(
@@ -681,7 +681,7 @@ mod tests {
 
         assert!(
             reveal_source.contains("spawn_restorable_editor_window(app.clone());"),
-            "reopening Markra without a live main window should create a restore-capable editor window"
+            "reopening marktion without a live main window should create a restore-capable editor window"
         );
         assert!(
             !reveal_source.contains("spawn_blank_editor_window(app.clone());"),

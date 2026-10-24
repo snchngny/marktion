@@ -423,7 +423,7 @@ describe("imagePreviewPlugin", () => {
     ).toBeNull();
   });
 
-  it("lets Markra resolve application assets through a host callback", () => {
+  it("lets marktion resolve application assets through a host callback", () => {
     const resolveSource = vi.fn((context) =>
       context.source.startsWith("markra://")
         ? "https://assets.example.test/mock.png"

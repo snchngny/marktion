@@ -38,7 +38,7 @@ export type CrashDiagnosticsReportInput = {
   platform: DesktopPlatform | null;
 };
 
-const diagnosticsIssueUrl = "https://github.com/markrahq/markra/issues/new";
+const diagnosticsIssueUrl = "https://github.com/snchngny/marktion/issues/new";
 
 export function generateDiagnosticsReport({
   aiSettings,
@@ -59,7 +59,7 @@ export function generateDiagnosticsReport({
   const enabledAiProviderCount = aiSettings.providers.filter((provider) => provider.enabled).length;
 
   return [
-    "## Markra Diagnostics",
+    "## marktion Diagnostics",
     "",
     "### App",
     line("Report time", reportTime),
@@ -138,7 +138,7 @@ export function generateCrashDiagnosticsReport({
   const normalizedError = normalizeCrashError(error);
 
   return [
-    "## Markra Crash Report",
+    "## marktion Crash Report",
     "",
     "### Error",
     line("Error name", normalizedError.name),

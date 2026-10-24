@@ -94,7 +94,7 @@ describe("useCodeMirrorEditorController", () => {
     expect(result.current.getSelectionFormattingState().actions).toEqual([]);
   });
 
-  it("runs selection toolbar formatting actions as direct Markra commands", () => {
+  it("runs selection toolbar formatting actions as direct marktion commands", () => {
     const doc = "Before text after";
     const from = doc.indexOf("text");
     const view = createView(

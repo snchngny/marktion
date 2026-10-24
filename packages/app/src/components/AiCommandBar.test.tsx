@@ -469,8 +469,8 @@ describe("AiCommandBar", () => {
 
     fireEvent.click(screen.getByRole("textbox", { name: "AI command" }));
 
-    expect(screen.getByText("This may work better in Markra AI.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Use Markra AI" }));
+    expect(screen.getByText("This may work better in marktion AI.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Use marktion AI" }));
 
     expect(onTransferToAiPanel).toHaveBeenCalledWith("Compare these options\n- speed\n- reliability");
   });
@@ -492,7 +492,7 @@ describe("AiCommandBar", () => {
 
     fireEvent.click(screen.getByRole("textbox", { name: "AI command" }));
 
-    expect(screen.queryByText("This may work better in Markra AI.")).not.toBeInTheDocument();
+    expect(screen.queryByText("This may work better in marktion AI.")).not.toBeInTheDocument();
   });
 
   it("uses quick actions, sends them immediately, and hides the toolkit once the user types", async () => {

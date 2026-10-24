@@ -19,13 +19,13 @@ describe("native shell command", () => {
   it("reads the shell command status from Tauri", async () => {
     mockedInvoke.mockResolvedValue({
       commandPath: "/mock-bin/markra",
-      targetPath: "/Applications/Markra.app/Contents/MacOS/markra",
+      targetPath: "/Applications/marktion.app/Contents/MacOS/marktion",
       status: "installed"
     });
 
     await expect(getNativeShellCommandStatus()).resolves.toEqual({
       commandPath: "/mock-bin/markra",
-      targetPath: "/Applications/Markra.app/Contents/MacOS/markra",
+      targetPath: "/Applications/marktion.app/Contents/MacOS/marktion",
       status: "installed"
     });
 
@@ -36,12 +36,12 @@ describe("native shell command", () => {
     mockedInvoke
       .mockResolvedValueOnce({
         commandPath: "/mock-bin/markra",
-        targetPath: "/Applications/Markra.app/Contents/MacOS/markra",
+        targetPath: "/Applications/marktion.app/Contents/MacOS/marktion",
         status: "installed"
       })
       .mockResolvedValueOnce({
         commandPath: "/mock-bin/markra",
-        targetPath: "/Applications/Markra.app/Contents/MacOS/markra",
+        targetPath: "/Applications/marktion.app/Contents/MacOS/marktion",
         status: "missing"
       });
 

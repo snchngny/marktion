@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Markra",
+  "productName": "marktion",
   "version": "2.14.0",
-  "identifier": "dev.markra.app",
+  "identifier": "io.github.snchngny.marktion",
   "build": {
     "beforeDevCommand": "pnpm dev --host 127.0.0.1 --port 1420 --strictPort",
     "devUrl": "http://127.0.0.1:1420",
@@ -67,7 +67,7 @@
           "./windows/explorer-menu.wxs"
         ],
         "componentRefs": [
-          "MarkraExplorerMenu"
+          "marktionExplorerMenu"
         ]
       }
     },

@@ -224,7 +224,7 @@ const settingsWorkspaceWindowLabel = "markra-settings";
 const maxFileTreeSortWorkspaceEntries = 50;
 const storedAppSettingsFileFormat = "markra-settings";
 const storedAppSettingsFileVersion = 1;
-const invalidStoredAppSettingsFileMessage = "Invalid Markra settings file.";
+const invalidStoredAppSettingsFileMessage = "Invalid marktion settings file.";
 
 type StoredWorkspaceStateOptions = {
   windowLabel?: string | null;

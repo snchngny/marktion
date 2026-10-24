@@ -1,6 +1,6 @@
-export const initialMarkdown = `# Welcome to Markra
+export const initialMarkdown = `# Welcome to marktion
 
-Markra is becoming a quiet, local-first Markdown editor with AI available only when you ask for it.
+marktion is becoming a quiet, local-first Markdown editor with AI available only when you ask for it.
 
 ## Today
 

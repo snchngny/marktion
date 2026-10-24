@@ -142,7 +142,7 @@ describe("editor preferences", () => {
           password: "secret",
           publicBaseUrl: " https://cdn.example.com/images/ ",
           serverUrl: " https://dav.example.com/remote.php/dav/files/me/ ",
-          uploadPath: " Markra/screenshots ",
+          uploadPath: " marktion/screenshots ",
           username: " ada "
         }
       },
@@ -211,7 +211,7 @@ describe("editor preferences", () => {
           password: "secret",
           publicBaseUrl: "https://cdn.example.com/images",
           serverUrl: "https://dav.example.com/remote.php/dav/files/me",
-          uploadPath: "Markra/screenshots",
+          uploadPath: "marktion/screenshots",
           username: "ada"
         }
       },

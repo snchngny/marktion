@@ -645,7 +645,7 @@ describe("CodeMirrorPaperSurface", () => {
     expect(view.state.doc.toString()).toBe("After");
   });
 
-  it("adapts Markra workspace files into plugin-driven document links", () => {
+  it("adapts marktion workspace files into plugin-driven document links", () => {
     const onEditorReady = vi.fn();
     render(
       <CodeMirrorPaperSurface
@@ -892,7 +892,7 @@ describe("CodeMirrorPaperSurface", () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  it("enables Markra extended Markdown previews without rewriting source", () => {
+  it("enables marktion extended Markdown previews without rewriting source", () => {
     const onEditorReady = vi.fn();
     const doc = [
       "---",
@@ -1274,7 +1274,7 @@ describe("CodeMirrorPaperSurface", () => {
     expect(view.state.doc.toString()).toBe(doc);
   });
 
-  it("routes pasted image files through Markra's existing save callback", async () => {
+  it("routes pasted image files through marktion's existing save callback", async () => {
     const onEditorReady = vi.fn();
     const onSaveClipboardImage = vi.fn().mockResolvedValue({
       alt: "Synthetic image",
@@ -1313,7 +1313,7 @@ describe("CodeMirrorPaperSurface", () => {
     });
   });
 
-  it("routes local attachments and external URLs through Markra host callbacks", () => {
+  it("routes local attachments and external URLs through marktion host callbacks", () => {
     const onEditorReady = vi.fn();
     const openExternalUrl = vi.fn();
     const openLocalAttachment = vi.fn();
@@ -1439,7 +1439,7 @@ describe("CodeMirrorPaperSurface", () => {
     expect(screen.queryByRole("menu", { name: "Spelling suggestions" })).toBeNull();
   });
 
-  it("adds a CodeMirror spellcheck word to Markra's ignored-word preferences", async () => {
+  it("adds a CodeMirror spellcheck word to marktion's ignored-word preferences", async () => {
     const onAddSpellcheckIgnoredWord = vi.fn();
     const onEditorReady = vi.fn();
     render(

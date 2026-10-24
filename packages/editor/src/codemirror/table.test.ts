@@ -1032,7 +1032,7 @@ describe("tablePreviewPlugin", () => {
     expect(setData).toHaveBeenCalledWith("text/plain", tableMarkdown);
   });
 
-  it("renders the original Markra table control layout and icons", () => {
+  it("renders the original marktion table control layout and icons", () => {
     const doc = [
       "| Name | Value |",
       "| :--- | :--- |",
@@ -2081,7 +2081,7 @@ describe("tablePreviewPlugin", () => {
     expect(view.state.doc.toString()).toBe(doc);
   });
 
-  it("applies Markra's configured table width mode", () => {
+  it("applies marktion's configured table width mode", () => {
     const doc = [
       "| Name | Value |",
       "| --- | --- |",
@@ -2135,7 +2135,7 @@ describe("tablePreviewPlugin", () => {
     const doc = [
       "| Field | Value |",
       "| --- | --- |",
-      "| Name | Markra |",
+      "| Name | marktion |",
       "",
       "Edit",
     ].join("\n");
@@ -2164,7 +2164,7 @@ describe("tablePreviewPlugin", () => {
     await Promise.resolve();
 
     expect(view.state.doc.toString()).toContain("| Field | Value |  |");
-    expect(view.state.doc.toString()).toContain("| Name | Markra |  |");
+    expect(view.state.doc.toString()).toContain("| Name | marktion |  |");
     expect(view.state.doc.toString().match(/^\|  \|  \|  \|$/gmu)).toHaveLength(2);
     expect(document.querySelector(".markra-table-size-popover")).toBeNull();
     expect(view.dom.querySelector(".cm-markra-table")).not.toBeNull();
@@ -2179,7 +2179,7 @@ describe("tablePreviewPlugin", () => {
     const doc = [
       "| Field | Value |",
       "| --- | --- |",
-      "| Name | Markra |",
+      "| Name | marktion |",
       "",
       "Edit",
     ].join("\n");

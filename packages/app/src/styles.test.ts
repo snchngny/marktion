@@ -41,7 +41,7 @@ describe("editor stylesheet", () => {
     expect(surfaceRule).toContain("font-family: var(--editor-font-family);");
   });
 
-  it("maps Markra document typography onto CodeMirror without styling its widget buffers as content images", () => {
+  it("maps marktion document typography onto CodeMirror without styling its widget buffers as content images", () => {
     const styles = readFileSync(`${process.cwd()}/src/styles.css`, "utf8");
 
     expect(styles).toContain(".markdown-paper img:not(.cm-widgetBuffer)");

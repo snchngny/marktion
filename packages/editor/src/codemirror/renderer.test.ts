@@ -28,7 +28,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe("Markra renderers", () => {
+describe("marktion renderers", () => {
   it("runs contributed node renderers inside the shared preview pass", () => {
     const render = vi.fn((context) => {
       context.add(
@@ -112,19 +112,19 @@ describe("Markra renderers", () => {
         markraRenderer(renderer),
         markraRenderer(renderer),
       ]),
-    ).toThrow('Duplicate Markra renderer id "synthetic.duplicate"');
+    ).toThrow('Duplicate marktion renderer id "synthetic.duplicate"');
   });
 
   it("requires renderers to declare stable identifiers and node names", () => {
     expect(() =>
       markraRenderer({ id: " ", nodeNames: ["Image"], render: () => true }),
-    ).toThrow("Markra renderer id must not be empty");
+    ).toThrow("marktion renderer id must not be empty");
     expect(() =>
       markraRenderer({
         id: "synthetic.empty",
         nodeNames: [],
         render: () => true,
       }),
-    ).toThrow('Markra renderer "synthetic.empty" must declare a node name');
+    ).toThrow('marktion renderer "synthetic.empty" must declare a node name');
   });
 });

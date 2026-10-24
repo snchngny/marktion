@@ -60,7 +60,7 @@ describe("SettingsShell", () => {
   it("shows the configured app version in the sidebar footer", () => {
     renderSettingsSidebar();
 
-    expect(screen.getByText("Markra v9.9.9")).toBeInTheDocument();
+    expect(screen.getByText("marktion v9.9.9")).toBeInTheDocument();
   });
 
   it("styles the active settings category when aria-current is page", () => {

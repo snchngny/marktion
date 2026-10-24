@@ -16,7 +16,7 @@ function provider(overrides: Partial<AiProviderConfig>): AiProviderConfig {
 }
 
 describe("native web search support", () => {
-  it("recognizes providers that can use native web search in Markra adapters", () => {
+  it("recognizes providers that can use native web search in marktion adapters", () => {
     expect(getNativeWebSearchKind(provider({
       models: [{ capabilities: ["text", "web"], enabled: true, id: "gpt-5.5", name: "GPT-5.5" }],
       type: "openai"

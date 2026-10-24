@@ -327,7 +327,7 @@ export function GeneralSettings({
         <SettingsSection label={translate("settings.sections.updates")}>
           <SettingsRow
             title={translate("settings.update.currentVersion")}
-            description={`Markra ${appVersion}`}
+            description={`marktion ${appVersion}`}
           />
           <SettingsRow
             title={translate("settings.update.autoCheck")}

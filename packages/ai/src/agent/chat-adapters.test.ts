@@ -135,7 +135,7 @@ describe("AI chat adapters", () => {
     const request = getChatAdapter("openai-compatible").buildRequest(
       provider({
         baseUrl: "https://proxy.example.test/v1",
-        customHeaders: '{"HTTP-Referer":"https://markra.app","X-Title":"Markra"}',
+        customHeaders: '{"HTTP-Referer":"https://markra.app","X-Title":"marktion"}',
         type: "openai-compatible"
       } as Partial<AiProviderConfig>),
       "writer-model",
@@ -144,7 +144,7 @@ describe("AI chat adapters", () => {
 
     expect(request.headers).toMatchObject({
       "HTTP-Referer": "https://markra.app",
-      "X-Title": "Markra"
+      "X-Title": "marktion"
     });
   });
 
