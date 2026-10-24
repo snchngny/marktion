@@ -723,7 +723,12 @@ function dropTarget(event: MouseEvent, view: CodeMirrorView) {
   )) return null;
   const blocks = atomicCodeMirrorBlocks(view.state);
   const hit = eventElement(event);
-  const row = hit?.closest<HTMLElement>(".cm-line") ?? lineNearPointer(view, event);
+  const hitRow = hit?.closest<HTMLElement>(".cm-line");
+  const hitRect = hitRow?.getBoundingClientRect();
+  const row = hitRow && hitRect && (hitRect.height === 0 ||
+    event.clientY >= hitRect.top && event.clientY < hitRect.bottom)
+    ? hitRow
+    : lineNearPointer(view, event);
   const rowFrom = Number(row?.dataset.markraBlockFrom);
   let position: number | null = null;
   try {

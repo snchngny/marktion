@@ -312,6 +312,31 @@ describe("codeMirrorBlockDragPlugin", () => {
     expect(view.state.doc.toString()).toBe(doc);
   });
 
+  it("uses the coordinate row when a neighboring line receives the pointer event", () => {
+    const doc = "Alpha\n\nBravo first\ncontinued\nlast\n\nCharlie\n\nDelta";
+    const view = createView(doc);
+    const rows = [...view.dom.querySelectorAll<HTMLElement>(".cm-line")];
+    const continued = rows.find((line) => line.textContent === "continued")!;
+    const last = rows.find((line) => line.textContent === "last")!;
+    Object.defineProperty(continued, "getBoundingClientRect", { value: () => new DOMRect(0, 100, 200, 20) });
+    Object.defineProperty(last, "getBoundingClientRect", { value: () => new DOMRect(0, 120, 200, 20) });
+    Object.defineProperty(view, "posAtCoords", { value: () => doc.indexOf("continued") + 2 });
+    const handle = view.dom.querySelector<HTMLElement>(`[data-block-from="${doc.indexOf("Delta")}"] .markra-block-drag-handle`)!;
+    handle.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true, cancelable: true, button: 0, pointerId: 21, clientX: 10, clientY: 200,
+    }));
+    last.dispatchEvent(new PointerEvent("pointermove", {
+      bubbles: true, cancelable: true, pointerId: 21, clientX: 10, clientY: 119.5,
+    }));
+    expect(view.dom.querySelector<HTMLElement>(".markra-block-drop-indicator")?.style.top).toBe("140px");
+    last.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true, cancelable: true, pointerId: 21, clientX: 10, clientY: 119.5,
+    }));
+    expect(view.state.doc.toString()).toBe("Alpha\n\nBravo first\ncontinued\nlast\n\nDelta\n\nCharlie");
+    expect(undo(view)).toBe(true);
+    expect(view.state.doc.toString()).toBe(doc);
+  });
+
   it("rejects an empty external drag payload instead of treating it as block zero", () => {
     const view = createView("First\n\nSecond");
     const target = view.dom.querySelector<HTMLElement>('.cm-line[data-markra-block-from="7"]');
